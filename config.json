@@ -1,17 +1,18 @@
 {
   "week_start_day": "monday",
-  "currency_symbol": "GBP",
+  "currency_symbol": "AUD",
   "input_dir": "input",
   "output_dir": "output",
   "output_filename": "payslips.xlsx",
   "supported_extensions": [".pdf", ".txt"],
   "field_aliases": {
-    "gross": ["gross", "gross pay", "total gross"],
+    "gross": ["gross", "gross pay", "total gross", "total earnings"],
     "net": ["net", "net pay", "take home"],
-    "tax": ["tax", "paye", "income tax"],
-    "ni": ["ni", "national insurance"],
-    "hours": ["hours", "hours worked", "total hours"],
-    "pay_date": ["pay date", "payment date", "date paid"],
+    "tax": ["tax", "paye", "income tax", "payg"],
+    "ni": ["ni", "national insurance", "super", "superannuation"],
+    "hours": ["hours", "hours worked", "total hours", "ordinary hours", "weekends"],
+    "pay_date": ["payment date", "date paid", "pay date"],
+    "pay_period": ["pay period"],
     "employee": ["employee", "name", "employee name"]
   }
 }
