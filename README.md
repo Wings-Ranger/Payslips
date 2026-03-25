@@ -2,6 +2,15 @@
 
 Automatically parse payslips, detect missing weeks, and export a spreadsheet.
 
+## Quick Start (Non-Technical)
+
+1. Put your payslip files into the `input` folder.
+2. Double-click `run_tracker.bat`.
+3. Wait for completion. The spreadsheet opens automatically if created.
+4. Find outputs in `output/`:
+	- `payslips.xlsx`
+	- `payslips.csv`
+
 ## What it does
 
 - Scans files in `input/` (`.pdf` and `.txt` by default)
@@ -31,3 +40,4 @@ Drop payslips into `input/`.
 
 - Parsing works best when the PDF text is selectable.
 - If your payslip labels differ, update `config.json` under `field_aliases`.
+- If `py` is not available on your machine, edit `run_tracker.bat` and replace `py` with `python`.
