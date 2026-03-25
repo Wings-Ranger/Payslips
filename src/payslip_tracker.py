@@ -8,6 +8,8 @@ from typing import Optional
 import pandas as pd
 from PyPDF2 import PdfReader
 from dateutil import parser as date_parser
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
 
 @dataclass
@@ -137,6 +139,17 @@ def get_week_start(dt: datetime, start_day: str = "monday") -> datetime:
 
 
 def parse_payslip(file_path: Path, text: str, config: dict) -> PayslipRecord:
+    # Check if PDF is scanned (no extractable text)
+    if len(text.strip()) < 50:
+        return PayslipRecord(
+            file_name=file_path.name,
+            employee=None,
+            pay_date=None,
+            pay_period=None,
+            week_start=None,
+            notes="SKIPPED: This is a scanned PDF image. Requires OCR to read. Use 'PaySlip.pdf' format or convert to text-based PDF.",
+        )
+    
     # Extract employee name - first non-empty line
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     employee_raw = lines[0] if lines else None
@@ -368,6 +381,120 @@ def find_missing_weeks(df: pd.DataFrame) -> list[str]:
     return missing
 
 
+def format_excel_output(xlsx_path: Path) -> None:
+    """Apply formatting to Excel output for readability."""
+    from openpyxl import load_workbook
+    
+    wb = load_workbook(str(xlsx_path))
+    ws = wb.active
+    
+    # Define colors for different sections
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    
+    ordinary_fill = PatternFill(start_color="E7E6FF", end_color="E7E6FF", fill_type="solid")
+    weekend_fill = PatternFill(start_color="FFF2CC", end_color="FFF2CC", fill_type="solid")
+    public_fill = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
+    gross_fill = PatternFill(start_color="FDB766", end_color="FDB766", fill_type="solid")
+    tax_fill = PatternFill(start_color="FFB3B3", end_color="FFB3B3", fill_type="solid")
+    
+    # Border style
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Column widths
+    col_widths = {
+        'A': 20,  # file_name
+        'B': 18,  # employee
+        'C': 12,  # pay_date
+        'D': 18,  # pay_period
+        'E': 12,  # week_start
+        'F': 15,  # ordinary_hours
+        'G': 13,  # ordinary_rate
+        'H': 16,  # ordinary_pay_this
+        'I': 15,  # ordinary_pay_ytd
+        'J': 14,  # weekend_hours
+        'K': 13,  # weekend_rate
+        'L': 16,  # weekend_pay_this
+        'M': 15,  # weekend_pay_ytd
+        'N': 16,  # public_holiday_hours
+        'O': 15,  # public_holiday_rate
+        'P': 18,  # public_holiday_pay_this
+        'Q': 17,  # public_holiday_pay_ytd
+        'R': 15,  # gross_this_pay
+        'S': 12,  # gross_ytd
+        'T': 14,  # tax_this_pay
+        'U': 11,  # tax_ytd
+        'V': 15,  # payg_this_pay
+        'W': 12,  # payg_ytd
+        'X': 14,  # net_this_pay
+        'Y': 11,  # net_ytd
+        'Z': 18,  # total_hours_this_pay
+        'AA': 15, # notes
+    }
+    
+    # Apply column widths
+    for col_letter, width in col_widths.items():
+        ws.column_dimensions[col_letter].width = width
+    
+    # Map columns to fill colors
+    color_map = {
+        'F': ordinary_fill, 'G': ordinary_fill, 'H': ordinary_fill, 'I': ordinary_fill,  # Ordinary
+        'J': weekend_fill, 'K': weekend_fill, 'L': weekend_fill, 'M': weekend_fill,      # Weekend
+        'N': public_fill, 'O': public_fill, 'P': public_fill, 'Q': public_fill,          # Public holiday
+        'R': gross_fill, 'S': gross_fill,                                                # Gross
+        'T': tax_fill, 'U': tax_fill, 'V': tax_fill, 'W': tax_fill,                      # Tax
+    }
+    
+    # Format header row
+    for col_num, cell in enumerate(ws[1], 1):
+        col_letter = get_column_letter(col_num)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.border = thin_border
+    
+    # Format data rows
+    for row_num, row in enumerate(ws.iter_rows(min_row=2, max_row=ws.max_row), 2):
+        for col_num, cell in enumerate(row, 1):
+            col_letter = get_column_letter(col_num)
+            
+            # Apply section colors
+            if col_letter in color_map:
+                cell.fill = color_map[col_letter]
+            
+            # Apply borders
+            cell.border = thin_border
+            
+            # Format currency columns
+            if col_letter in ['H', 'I', 'L', 'M', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y']:
+                cell.number_format = '$#,##0.00'
+                cell.alignment = Alignment(horizontal='right', vertical='center')
+            # Format numeric columns (hours, rates)
+            elif col_letter in ['F', 'G', 'J', 'K', 'N', 'O', 'Z']:
+                cell.number_format = '0.00'
+                cell.alignment = Alignment(horizontal='right', vertical='center')
+            # Format date columns
+            elif col_letter in ['C', 'E']:
+                cell.number_format = 'yyyy-mm-dd'
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+            # Center-align text columns
+            else:
+                cell.alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
+    
+    # Freeze header row
+    ws.freeze_panes = 'A2'
+    
+    wb.save(str(xlsx_path))
+
+
+
+
+
 def run() -> None:
     project_root = Path(__file__).resolve().parents[1]
     config = load_config(project_root)
@@ -407,6 +534,7 @@ def run() -> None:
             pd.DataFrame({"missing_week_start": missing_weeks}).to_excel(
                 writer, index=False, sheet_name="missing_weeks"
             )
+        format_excel_output(xlsx_path)
     except PermissionError:
         from datetime import datetime as dt
         backup_name = f"payslips_{dt.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
@@ -416,6 +544,7 @@ def run() -> None:
             pd.DataFrame({"missing_week_start": missing_weeks}).to_excel(
                 writer, index=False, sheet_name="missing_weeks"
             )
+        format_excel_output(xlsx_path)
         print(f"(Note: Main file was locked, saved as: {backup_name})")
 
     df.to_csv(csv_path, index=False)
