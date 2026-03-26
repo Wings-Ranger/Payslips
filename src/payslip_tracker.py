@@ -397,6 +397,9 @@ def format_excel_output(xlsx_path: Path) -> None:
     public_fill = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
     gross_fill = PatternFill(start_color="FDB766", end_color="FDB766", fill_type="solid")
     tax_fill = PatternFill(start_color="FFB3B3", end_color="FFB3B3", fill_type="solid")
+    pass_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+    fail_fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+    na_fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
     
     # Border style
     thin_border = Border(
@@ -434,7 +437,23 @@ def format_excel_output(xlsx_path: Path) -> None:
         'X': 14,  # net_this_pay
         'Y': 11,  # net_ytd
         'Z': 18,  # total_hours_this_pay
-        'AA': 15, # notes
+        'AA': 22, # ordinary_expected_this
+        'AB': 14, # ordinary_diff_this
+        'AC': 14, # ordinary_check
+        'AD': 22, # weekend_expected_this
+        'AE': 14, # weekend_diff_this
+        'AF': 14, # weekend_check
+        'AG': 25, # public_holiday_expected_this
+        'AH': 18, # public_holiday_diff_this
+        'AI': 20, # public_holiday_check
+        'AJ': 22, # calculated_gross_this
+        'AK': 12, # gross_diff_this
+        'AL': 12, # gross_check
+        'AM': 20, # calculated_net_this
+        'AN': 12, # net_diff_this
+        'AO': 12, # net_check
+        'AP': 16, # overall_pay_check
+        'AQ': 30, # notes
     }
     
     # Apply column widths
@@ -451,12 +470,23 @@ def format_excel_output(xlsx_path: Path) -> None:
     }
     
     # Format header row
+    header_by_col: dict[str, str] = {}
     for col_num, cell in enumerate(ws[1], 1):
         col_letter = get_column_letter(col_num)
+        header_by_col[col_letter] = str(cell.value or "")
         cell.font = header_font
         cell.fill = header_fill
         cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
         cell.border = thin_border
+
+    check_headers = {
+        "Ordinary Check",
+        "Weekend Check",
+        "Public Holiday Check",
+        "Gross Check",
+        "Net Check",
+        "Overall Pay Check",
+    }
     
     # Format data rows
     for row_num, row in enumerate(ws.iter_rows(min_row=2, max_row=ws.max_row), 2):
@@ -466,16 +496,26 @@ def format_excel_output(xlsx_path: Path) -> None:
             # Apply section colors
             if col_letter in color_map:
                 cell.fill = color_map[col_letter]
+
+            # Highlight validation checks for quick review.
+            if header_by_col.get(col_letter) in check_headers and isinstance(cell.value, str):
+                value = cell.value.strip().upper()
+                if value == 'PASS':
+                    cell.fill = pass_fill
+                elif value == 'FAIL':
+                    cell.fill = fail_fill
+                elif value == 'N/A':
+                    cell.fill = na_fill
             
             # Apply borders
             cell.border = thin_border
             
             # Format currency columns
-            if col_letter in ['H', 'I', 'L', 'M', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y']:
+            if col_letter in ['H', 'I', 'L', 'M', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'AA', 'AD', 'AG', 'AJ', 'AM']:
                 cell.number_format = '$#,##0.00'
                 cell.alignment = Alignment(horizontal='right', vertical='center')
             # Format numeric columns (hours, rates)
-            elif col_letter in ['F', 'G', 'J', 'K', 'N', 'O', 'Z']:
+            elif col_letter in ['F', 'G', 'J', 'K', 'N', 'O', 'Z', 'AB', 'AE', 'AH', 'AK', 'AN']:
                 cell.number_format = '0.00'
                 cell.alignment = Alignment(horizontal='right', vertical='center')
             # Format date columns
@@ -525,6 +565,22 @@ EXCEL_HEADERS = {
     "net_this_pay": "Net Pay (This)",
     "net_ytd": "Net Pay (YTD)",
     "total_hours_this_pay": "Total Hours",
+    "ordinary_expected_this": "Ordinary Expected (This)",
+    "ordinary_diff_this": "Ordinary Diff",
+    "ordinary_check": "Ordinary Check",
+    "weekend_expected_this": "Weekend Expected (This)",
+    "weekend_diff_this": "Weekend Diff",
+    "weekend_check": "Weekend Check",
+    "public_holiday_expected_this": "Public Holiday Expected (This)",
+    "public_holiday_diff_this": "Public Holiday Diff",
+    "public_holiday_check": "Public Holiday Check",
+    "calculated_gross_this": "Calculated Gross (This)",
+    "gross_diff_this": "Gross Diff",
+    "gross_check": "Gross Check",
+    "calculated_net_this": "Calculated Net (This)",
+    "net_diff_this": "Net Diff",
+    "net_check": "Net Check",
+    "overall_pay_check": "Overall Pay Check",
     "notes": "Notes",
 }
 
@@ -560,11 +616,98 @@ def append_validation_notes(record: PayslipRecord) -> PayslipRecord:
         return record
 
     schema_note = f"SCHEMA_INVALID: missing required fields: {', '.join(missing)}"
+    if schema_note in (record.notes or ""):
+        return record
+
     if record.notes:
         record.notes = f"{record.notes}; {schema_note}"
     else:
         record.notes = schema_note
     return record
+
+
+def _round_money(value: Optional[float]) -> Optional[float]:
+    if value is None:
+        return None
+    return round(float(value), 2)
+
+
+def _calc_expected_pay(hours: Optional[float], rate: Optional[float]) -> Optional[float]:
+    if hours is None or rate is None:
+        return None
+    return _round_money(hours * rate)
+
+
+def _calc_diff(actual: Optional[float], expected: Optional[float]) -> Optional[float]:
+    if actual is None or expected is None:
+        return None
+    return _round_money(actual - expected)
+
+
+def _status_from_diff(diff: Optional[float], tolerance: float) -> str:
+    if diff is None:
+        return "N/A"
+    return "PASS" if abs(diff) <= tolerance else "FAIL"
+
+
+def add_pay_validation_columns(df: pd.DataFrame, tolerance: float = 0.01) -> pd.DataFrame:
+    """Add calculation and reconciliation columns used in Excel output."""
+    validated = df.copy()
+
+    validated["ordinary_expected_this"] = validated.apply(
+        lambda r: _calc_expected_pay(r.get("ordinary_hours"), r.get("ordinary_rate")), axis=1
+    )
+    validated["weekend_expected_this"] = validated.apply(
+        lambda r: _calc_expected_pay(r.get("weekend_hours"), r.get("weekend_rate")), axis=1
+    )
+    validated["public_holiday_expected_this"] = validated.apply(
+        lambda r: _calc_expected_pay(r.get("public_holiday_hours"), r.get("public_holiday_rate")), axis=1
+    )
+
+    validated["ordinary_diff_this"] = validated.apply(
+        lambda r: _calc_diff(r.get("ordinary_pay_this"), r.get("ordinary_expected_this")), axis=1
+    )
+    validated["weekend_diff_this"] = validated.apply(
+        lambda r: _calc_diff(r.get("weekend_pay_this"), r.get("weekend_expected_this")), axis=1
+    )
+    validated["public_holiday_diff_this"] = validated.apply(
+        lambda r: _calc_diff(r.get("public_holiday_pay_this"), r.get("public_holiday_expected_this")), axis=1
+    )
+
+    validated["ordinary_check"] = validated["ordinary_diff_this"].apply(lambda v: _status_from_diff(v, tolerance))
+    validated["weekend_check"] = validated["weekend_diff_this"].apply(lambda v: _status_from_diff(v, tolerance))
+    validated["public_holiday_check"] = validated["public_holiday_diff_this"].apply(
+        lambda v: _status_from_diff(v, tolerance)
+    )
+
+    validated["calculated_gross_this"] = (
+        validated[["ordinary_pay_this", "weekend_pay_this", "public_holiday_pay_this"]].fillna(0.0).sum(axis=1).round(2)
+    )
+    validated["gross_diff_this"] = validated.apply(
+        lambda r: _calc_diff(r.get("gross_this_pay"), r.get("calculated_gross_this")), axis=1
+    )
+    validated["gross_check"] = validated["gross_diff_this"].apply(lambda v: _status_from_diff(v, tolerance))
+
+    validated["calculated_net_this"] = validated.apply(
+        lambda r: _round_money((r.get("gross_this_pay") or 0.0) - ((r.get("tax_this_pay") or 0.0) + (r.get("payg_this_pay") or 0.0))),
+        axis=1,
+    )
+    validated["net_diff_this"] = validated.apply(
+        lambda r: _calc_diff(r.get("net_this_pay"), r.get("calculated_net_this")), axis=1
+    )
+    validated["net_check"] = validated["net_diff_this"].apply(lambda v: _status_from_diff(v, tolerance))
+
+    validated["overall_pay_check"] = validated.apply(
+        lambda r: "PASS"
+        if all(
+            r.get(col) == "PASS"
+            for col in ["ordinary_check", "weekend_check", "public_holiday_check", "gross_check", "net_check"]
+        )
+        else "FAIL",
+        axis=1,
+    )
+
+    return validated
 
 
 def rename_for_excel(df: pd.DataFrame) -> pd.DataFrame:
@@ -598,6 +741,7 @@ def run() -> None:
         records.append(record)
 
     df = pd.DataFrame([asdict(r) for r in records])
+    df = add_pay_validation_columns(df)
     df = df.sort_values(by=["week_start", "pay_date", "file_name"], na_position="last").reset_index(drop=True)
 
     missing_weeks = find_missing_weeks(df)
