@@ -1,157 +1,103 @@
-# Payslip Tracker
+# Payslip Tracker - Technical Documentation
 
-Automatically parse payslips, detect missing weeks, generate summaries, and create multi-sheet analytics reports.
+Automatically parse payslip PDFs/TXT files, detect missing weeks, and generate formatted Excel reports.
 
-## Quick Start (Non-Technical)
+## Project Structure
 
-1. Put your payslip files into the `input` folder.
-2. Double-click `run_tracker_fallback.bat` (recommended).
-   - It tries `py` first, then `python`.
-3. Wait for completion.
-4. Find outputs in `output/`:
-   - `payslips.xlsx` (multi-sheet report with summaries and analytics)
-   - `payslips.csv` (detailed data export)
-   - `backups/` (automatic backup with timestamp)
-
-## What it does
-##dudde
-- **Scans & Parses**: Reads payslips from `input/` (`.pdf` and `.txt` files)
-- **Extracts Data**: Captures 28 fields including:
-  - Employee details, pay dates, pay periods
-  - Hours: ordinary, weekend, public holiday
-  - Pay rates and this-pay amounts
-  - Year-to-date (YTD) totals
-  - Gross, net, tax, and PAYG amounts
-- **Generates Multi-Sheet Excel Report**:
-  - **payslips**: All raw payslip data with professional formatting
-  - **summary**: Key statistics (totals, averages, YTD figures)
-  - **monthly**: Monthly breakdown with aggregated pay and hours
-  - **weekly**: Weekly summaries by week start date
-  - **deductions**: Tax and PAYG breakdown analysis
-  - **missing_weeks**: List of weeks with no payslip detected
-  - **alerts**: Anomaly detection for unusual pay or low hours
-- **Creates Backups**: Automatic timestamped backup after each run
-- **Exports CSV**: Detailed data in CSV format for other tools
-- **Detects Issues**: Identifies missing weekly payslips and anomalies
-
-## Output
-
-The tracker generates a professional multi-sheet Excel workbook (`payslips.xlsx`) with the following sheets:
-
-### **payslips** (Raw Data)
-- All 28 fields from each payslip in a single table
-- Color-coded columns by category (hours, rates, gross, net, tax)
-- Frozen header row for easy scrolling
-- Formatted with proper number formatting and borders
-
-### **summary** (Key Metrics)
-- Total payslips processed
-- Date range covered
-- **Totals**: Gross pay, net pay, tax, hours worked
-- **Averages**: Weekly gross, weekly net, hours per week
-- **YTD totals**: Year-to-date figures from latest payslip
-
-### **monthly** (Monthly Breakdown)
-- Aggregated by month (YYYY-MM)
-- Gross/net/tax per month
-- Total hours worked per month
-- Number of payslips per month
-
-### **weekly** (Weekly Summary)
-- Aggregated by week start date
-- Hours by type: ordinary, weekend, public holiday
-- Weekly gross/net/tax totals
-- Useful for tracking weekly patterns
-
-### **deductions** (Tax Analysis)
-- PAYG tax breakdown
-- Other tax amounts
-- Both this-pay and YTD figures
-- Helps track tax withholding trends
-
-### **missing_weeks**
-- Lists any weeks with no payslip detected
-- Useful for identifying gaps
-- Based on week start dates from parsed payslips
-
-### **alerts** (Anomalies)
-- Flags weeks with unusually low pay
-- Flags weeks with unusually low hours
-- Helps identify potential errors or part-time weeks
-
-## Setup
-
-### Option 1: Using Python directly
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python src/payslip_tracker.py
+```
+Payslips/
+  Process Payslips.bat   # Entry point - double-click to run
+  input/                 # Drop payslip files here
+  output/                # Generated reports appear here
+  src/
+    config.json          # Runtime configuration
+    payslip_tracker.py   # Main application
+  scripts/               # Dev/debug utilities
+  tests/                 # Unit tests
+  docs/
+    README.md            # This file
+    requirements.txt     # Python dependencies
 ```
 
-### Option 2: Using the bat launcher (Recommended)
-```powershell
-.\run_tracker_fallback.bat
-```
+## Architecture
 
-## Input
+### Data Flow
 
-1. Place payslip files in the `input/` folder
-2. Supported formats:
-   - **Text PDF files** (recommended) - PDFs with selectable text
-   - **Plain text** (`.txt` files) - For testing or manual exports
-3. File naming doesn't matter - the tracker processes all supported files
+1. `run()` scans `input/` for supported files (`.pdf`, `.txt`)
+2. `read_text_from_file()` extracts raw text (PyPDF2 for PDFs)
+3. `parse_payslip()` extracts structured fields via regex into `PayslipRecord`
+4. `append_validation_notes()` flags records missing required schema fields
+5. DataFrame is built, sorted by `week_start`, and N/A-filled for empty pay sections
+6. `find_missing_weeks()` detects gaps in weekly payslip coverage
+7. Excel output with `rename_for_excel()` human-readable headers + `format_excel_output()` styling
+8. CSV export for external tooling
+
+### PayslipRecord Fields (27 fields)
+
+| Category | Fields |
+|----------|--------|
+| Identity | `file_name`, `employee`, `pay_date`, `pay_period`, `week_start` |
+| Ordinary | `ordinary_hours`, `ordinary_rate`, `ordinary_pay_this`, `ordinary_pay_ytd` |
+| Weekend | `weekend_hours`, `weekend_rate`, `weekend_pay_this`, `weekend_pay_ytd` |
+| Public Holiday | `public_holiday_hours`, `public_holiday_rate`, `public_holiday_pay_this`, `public_holiday_pay_ytd` |
+| Totals | `gross_this_pay`, `gross_ytd`, `tax_this_pay`, `tax_ytd`, `payg_this_pay`, `payg_ytd`, `net_this_pay`, `net_ytd`, `total_hours_this_pay` |
+| Metadata | `notes` |
+
+### Parsing Strategy
+
+- **Salary & Wages section**: Line-by-line scan between "salary & wages" and "tax" markers
+  - Matches "ordinary hours", "weekends sat/sun", "public holiday" lines
+  - Extracts 4 numeric fields per line: hours, rate, this-pay, YTD
+  - "TOTAL" line captures gross this-pay and YTD
+- **Tax section**: Between "tax" header and "payment details"
+  - Matches "payg" and other tax lines
+  - "TOTAL" fallback if no specific tax line found
+- **Net Pay**: Regex on normalized (single-line) text
+- **Scanned PDFs**: Detected when extracted text < 50 chars, flagged as SKIPPED
+
+### Excel Formatting
+
+- Color-coded sections: ordinary (blue), weekend (yellow), public holiday (green), gross (orange), tax (red)
+- Currency columns formatted as `$#,##0.00`
+- Notes column: wrapped text, left-aligned
+- Missing weeks sheet: black-filled empty cells, frozen header
+- Pay sections filled with "N/A" when not applicable to a payslip
+
+### Schema Validation
+
+Required fields: `file_name`, `employee`, `pay_date`, `week_start`
+
+Records missing required fields get `SCHEMA_INVALID` appended to notes.
 
 ## Configuration
 
-Edit `config.json` to customize behavior:
+`src/config.json`:
 
-```json
-{
-  "input_dir": "input",                    // Where to read payslips from
-  "output_dir": "output",                  // Where to save Excel/CSV
-  "output_filename": "payslips.xlsx",      // Name of output file
-  "supported_extensions": [".pdf", ".txt"], // File types to process
-  "week_start_day": "monday",              // First day of week
-  "currency": "AUD",                       // Currency symbol
-  "field_aliases": {                       // Label customization
-    "gross": "TOTAL",
-    "net": "Net Pay",
-    "tax": "TAX",
-    // ... more aliases for your payslip labels
-  }
-}
+| Key | Default | Description |
+|-----|---------|-------------|
+| `input_dir` | `"input"` | Payslip source directory |
+| `output_dir` | `"output"` | Report output directory |
+| `output_filename` | `"payslips.xlsx"` | Excel filename |
+| `supported_extensions` | `[".pdf", ".txt"]` | File types to process |
+| `week_start_day` | `"monday"` | First day of pay week |
+| `currency` | `"AUD"` | Currency label |
+| `field_aliases` | `{}` | Custom label mappings |
+
+## Setup
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r docs/requirements.txt
+python src/payslip_tracker.py
 ```
 
-## Troubleshooting
-
-**Q: "No payslip files found"**
-- Check that payslips are in the `input/` folder
-- Verify file extensions are `.pdf` or `.txt`
-
-**Q: "Could not extract data"**
-- Ensure PDF is text-based (not scanned/image)
-- Try opening PDF in text editor to verify content is readable
-- Check `config.json` field aliases match your payslip labels
-
-**Q: File says "locked" after running**
-- Occurs when Excel file is open when tracker runs
-- Automatic backup created with timestamp
-- Close Excel file and run tracker again
-
-## Privacy & Security
-
-- **Input/Output folders are ignored**: `input/` and `output/` are in `.gitignore` - payslips won't be accidentally uploaded to GitHub
-- **Local processing only**: All parsing happens on your computer; no data sent anywhere
-- **Automatic backups**: Timestamped backups preserved in `output/backups/`
-
-## Requirements
+## Dependencies
 
 - Python 3.9+
-- pandas (data processing)
-- openpyxl (Excel file creation)
-- PyPDF2 (PDF text extraction)
-- python-dateutil (date parsing)
+- pandas, openpyxl, PyPDF2, python-dateutil
 
-All dependencies listed in `requirements.txt`
+## Privacy
 
+- `input/` and `output/` are in `.gitignore`
+- All processing is local - no data leaves your machine
