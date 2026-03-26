@@ -12,7 +12,7 @@
 4. Runs the Python tracker with `py src\payslip_tracker.py`.
 5. If the script exits with a non-zero error code, switches to a red colour scheme, prints a plain-English error message, and pauses so the user can read it before the window closes.
 6. If the output file `output\payslips.xlsx` exists, it opens it in the default spreadsheet application.
-7. Prints a completion message and pauses.
+7. Prints a completion message and closes the window automatically.
 
 ## Terminal Preview
 
@@ -84,7 +84,6 @@ echo.
 echo    Your output files are saved in the output folder.
 echo.
 echo  ------------------------------------------------------------
-pause
 ```
 
 ## Key Techniques
@@ -101,7 +100,7 @@ pause
 | `py` instead of `python` | Uses the Windows Python Launcher (`py.exe`), which is available on Windows 10/11 and respects `#!` shebangs and version pins. |
 | `%errorlevel%` check | Propagates the Python exit code so the user knows whether the run succeeded or failed. |
 | `start "" output\payslips.xlsx` | Opens the file with its associated application (Excel or LibreOffice Calc) without blocking the batch script. The empty `""` is a required placeholder for the window title. |
-| Final `pause` | Keeps the terminal window open so the user can read the output before it closes. |
+| `pause` (error path only) | Keeps the terminal window open on failure so the user can read the error message before it closes. On a successful run the window closes automatically. |
 
 ## How to Re-Implement
 
@@ -133,7 +132,6 @@ if %errorlevel% neq 0 (
 )
 
 echo  Done.
-pause
 ```
 
 To open a different output file:

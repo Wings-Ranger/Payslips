@@ -57,4 +57,3 @@ echo.
 echo    Your output files are saved in the output folder.
 echo.
 echo  ------------------------------------------------------------
-pause
