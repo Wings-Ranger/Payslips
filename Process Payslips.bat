@@ -19,4 +19,3 @@ if exist output\payslips.xlsx (
 
 echo.
 echo Done. Your output files are in the output folder.
-pause
