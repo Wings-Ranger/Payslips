@@ -14,6 +14,7 @@ This directory contains one Markdown file per unique code block in the Payslips 
 | [find-missing-weeks.md](find-missing-weeks.md) | `find_missing_weeks()` | Detect gaps in weekly payslip coverage |
 | [format-excel-output.md](format-excel-output.md) | `format_excel_output()` | Apply colour coding, borders, and number formats to the Excel workbook |
 | [excel-headers-and-rename.md](excel-headers-and-rename.md) | `EXCEL_HEADERS` + `rename_for_excel()` | Map snake_case field names to human-readable Excel headers |
+| [add-pay-validation-columns.md](add-pay-validation-columns.md) | `add_pay_validation_columns()` | Cross-check hours × rate, component pay totals, and net pay with PASS/FAIL columns |
 | [schema-validation.md](schema-validation.md) | `REQUIRED_SCHEMA_FIELDS` + `validate_record_schema()` + `append_validation_notes()` | Flag records with missing required fields |
 | [run-entrypoint.md](run-entrypoint.md) | `run()` | Main orchestration function — scan, parse, validate, export |
 
@@ -33,6 +34,7 @@ This directory contains one Markdown file per unique code block in the Payslips 
 
 | File | Code Block | Description |
 |------|------------|-------------|
+| [script-build-exe.md](script-build-exe.md) | `build_exe.bat` | PyInstaller wrapper to produce a standalone `.exe` for distribution |
 | [script-check-headers.md](script-check-headers.md) | `check_headers.py` | Print the first 10 Excel column headers for a quick sanity check |
 | [script-debug-parse.md](script-debug-parse.md) | `debug_parse.py` + `debug_parse2.py` | Step through the section-scanning parser to diagnose mismatches |
 | [script-debug-sheets.md](script-debug-sheets.md) | `debug_sheets.py` | Inspect CSV data types and test summary-sheet functions |

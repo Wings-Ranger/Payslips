@@ -507,6 +507,7 @@ REQUIRED_SCHEMA_FIELDS = [
     "employee",
     "pay_date",
     "week_start",
+    "net_this_pay",
 ]
 
 
@@ -545,6 +546,60 @@ def rename_for_excel(df: pd.DataFrame) -> pd.DataFrame:
     """Rename dataframe columns to human-readable headers for Excel output."""
     rename_map = {col: EXCEL_HEADERS.get(col, col) for col in df.columns}
     return df.rename(columns=rename_map)
+
+
+_PAY_CHECK_TOLERANCE = 0.02  # maximum cent difference treated as a rounding pass
+
+
+def add_pay_validation_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Add PASS/FAIL columns that cross-check parsed pay figures for accuracy.
+
+    Columns added:
+      ordinary_check  — hours × rate ≈ ordinary_pay_this
+      weekend_check   — hours × rate ≈ weekend_pay_this
+      gross_check     — ordinary + weekend + public holiday pay ≈ gross_this_pay
+      net_check       — gross − tax − payg ≈ net_this_pay
+      overall_pay_check — PASS only when all four checks pass
+    """
+
+    def _pass_fail(diff: "pd.Series") -> "pd.Series":
+        """Convert a Series of absolute differences to PASS/FAIL strings."""
+        return (diff.abs() <= _PAY_CHECK_TOLERANCE).map({True: "PASS", False: "FAIL"})
+
+    df = df.copy()
+
+    # Coerce all relevant columns to numeric so vectorised arithmetic works even
+    # when the DataFrame contains "N/A" strings from the earlier fill step.
+    num = {
+        col: pd.to_numeric(df[col], errors="coerce")
+        for col in [
+            "ordinary_hours", "ordinary_rate", "ordinary_pay_this",
+            "weekend_hours", "weekend_rate", "weekend_pay_this",
+            "public_holiday_pay_this",
+            "gross_this_pay", "tax_this_pay", "payg_this_pay", "net_this_pay",
+        ]
+    }
+
+    df["ordinary_check"] = _pass_fail(
+        num["ordinary_hours"] * num["ordinary_rate"] - num["ordinary_pay_this"]
+    )
+    df["weekend_check"] = _pass_fail(
+        num["weekend_hours"] * num["weekend_rate"] - num["weekend_pay_this"]
+    )
+    df["gross_check"] = _pass_fail(
+        num["ordinary_pay_this"] + num["weekend_pay_this"] + num["public_holiday_pay_this"]
+        - num["gross_this_pay"]
+    )
+    df["net_check"] = _pass_fail(
+        num["gross_this_pay"] - num["tax_this_pay"] - num["payg_this_pay"] - num["net_this_pay"]
+    )
+    check_cols = ["ordinary_check", "weekend_check", "gross_check", "net_check"]
+    df["overall_pay_check"] = (
+        (df[check_cols] == "PASS").all(axis=1).map({True: "PASS", False: "FAIL"})
+    )
+
+    return df
+
 
 def run() -> None:
     project_root = Path(__file__).resolve().parents[1]
