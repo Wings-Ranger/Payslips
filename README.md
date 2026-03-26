@@ -14,7 +14,7 @@ Automatically parse payslips, detect missing weeks, generate summaries, and crea
    - `backups/` (automatic backup with timestamp)
 
 ## What it does
-
+##dudde
 - **Scans & Parses**: Reads payslips from `input/` (`.pdf` and `.txt` files)
 - **Extracts Data**: Captures 28 fields including:
   - Employee details, pay dates, pay periods
