@@ -14,6 +14,14 @@
 6. If the output file `output\payslips.xlsx` exists, it opens it in the default spreadsheet application.
 7. Prints a completion message and pauses.
 
+## Terminal Preview
+
+| Normal run | On error |
+|---|---|
+| ![Payslip Tracker terminal — normal run (blue screen) and error run (red screen)](https://github.com/user-attachments/assets/ba721c5d-e1a1-42bd-9761-48dcadd08870) | *(same image — error screen shown in lower half)* |
+
+The upper half shows the blue welcome screen with a step-by-step description; the lower half shows how the screen switches to red when something goes wrong.
+
 ## Code Block
 
 ```bat
