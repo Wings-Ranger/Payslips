@@ -529,6 +529,44 @@ EXCEL_HEADERS = {
 }
 
 
+REQUIRED_SCHEMA_FIELDS = [
+    "file_name",
+    "employee",
+    "pay_date",
+    "week_start",
+    "gross_this_pay",
+    "net_this_pay",
+]
+
+
+def validate_record_schema(record: PayslipRecord) -> list[str]:
+    """Return list of missing required fields for a parsed record."""
+    data = asdict(record)
+    missing: list[str] = []
+    for field_name in REQUIRED_SCHEMA_FIELDS:
+        value = data.get(field_name)
+        if value is None:
+            missing.append(field_name)
+            continue
+        if isinstance(value, str) and not value.strip():
+            missing.append(field_name)
+    return missing
+
+
+def append_validation_notes(record: PayslipRecord) -> PayslipRecord:
+    """Add schema validation errors into record notes for downstream visibility."""
+    missing = validate_record_schema(record)
+    if not missing:
+        return record
+
+    schema_note = f"SCHEMA_INVALID: missing required fields: {', '.join(missing)}"
+    if record.notes:
+        record.notes = f"{record.notes}; {schema_note}"
+    else:
+        record.notes = schema_note
+    return record
+
+
 def rename_for_excel(df: pd.DataFrame) -> pd.DataFrame:
     """Rename dataframe columns to human-readable headers for Excel output."""
     rename_map = {col: EXCEL_HEADERS.get(col, col) for col in df.columns}
@@ -556,6 +594,7 @@ def run() -> None:
     for file_path in sorted(files):
         text = read_text_from_file(file_path)
         record = parse_payslip(file_path, text, config)
+        record = append_validation_notes(record)
         records.append(record)
 
     df = pd.DataFrame([asdict(r) for r in records])
