@@ -25,6 +25,16 @@ from dataclasses import asdict
 from datetime import datetime as dt
 import pandas as pd
 
+def _write_excel(xlsx_path: Path, df: pd.DataFrame, missing_weeks: list[str]) -> None:
+    """Write the main payslips sheet and the missing_weeks sheet, then apply formatting."""
+    with pd.ExcelWriter(xlsx_path, engine="openpyxl") as writer:
+        rename_for_excel(df).to_excel(writer, index=False, sheet_name="payslips")
+        pd.DataFrame({"missing_week_start": missing_weeks}).to_excel(
+            writer, index=False, sheet_name="missing_weeks", header=["Week Start"]
+        )
+    format_excel_output(xlsx_path)
+
+
 def run() -> None:
     project_root = Path(__file__).resolve().parents[1]
     config = load_config(project_root)
@@ -86,15 +96,6 @@ def run() -> None:
             print(f"  - {w}")
     else:
         print("No missing weekly payslips detected in the observed range.")
-
-
-def _write_excel(xlsx_path: Path, df: pd.DataFrame, missing_weeks: list[str]) -> None:
-    with pd.ExcelWriter(xlsx_path, engine="openpyxl") as writer:
-        rename_for_excel(df).to_excel(writer, index=False, sheet_name="payslips")
-        pd.DataFrame({"missing_week_start": missing_weeks}).to_excel(
-            writer, index=False, sheet_name="missing_weeks", header=["Week Start"]
-        )
-    format_excel_output(xlsx_path)
 
 
 if __name__ == "__main__":

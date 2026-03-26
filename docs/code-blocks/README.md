@@ -9,13 +9,15 @@ This directory contains one Markdown file per unique code block in the Payslips 
 | [payslip-record-dataclass.md](payslip-record-dataclass.md) | `PayslipRecord` | Typed dataclass holding all fields extracted from one payslip |
 | [load-config.md](load-config.md) | `load_config()` | Load `src/config.json` relative to the project root |
 | [read-text-from-file.md](read-text-from-file.md) | `read_text_from_file()` | Extract plain text from PDF or TXT payslip files |
+| [extract-currency-values.md](extract-currency-values.md) | `extract_currency_values()` | Extract all numeric tokens from a payslip text line as floats |
 | [get-week-start.md](get-week-start.md) | `get_week_start()` | Calculate the most recent occurrence of a chosen weekday |
 | [parse-payslip.md](parse-payslip.md) | `parse_payslip()` | Core parser — extract all fields from payslip text via regex and section scanning |
 | [find-missing-weeks.md](find-missing-weeks.md) | `find_missing_weeks()` | Detect gaps in weekly payslip coverage |
 | [format-excel-output.md](format-excel-output.md) | `format_excel_output()` | Apply colour coding, borders, and number formats to the Excel workbook |
 | [excel-headers-and-rename.md](excel-headers-and-rename.md) | `EXCEL_HEADERS` + `rename_for_excel()` | Map snake_case field names to human-readable Excel headers |
+| [pay-validation-columns.md](pay-validation-columns.md) | `add_pay_validation_columns()` | Append cross-check columns verifying internal pay figure consistency |
 | [schema-validation.md](schema-validation.md) | `REQUIRED_SCHEMA_FIELDS` + `validate_record_schema()` + `append_validation_notes()` | Flag records with missing required fields |
-| [run-entrypoint.md](run-entrypoint.md) | `run()` | Main orchestration function — scan, parse, validate, export |
+| [run-entrypoint.md](run-entrypoint.md) | `run()` + `_write_excel()` | Main orchestration function — scan, parse, validate, export |
 
 ## Configuration
 

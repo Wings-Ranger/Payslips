@@ -55,6 +55,11 @@ def load_config(project_root: Path) -> dict:
         return json.load(f)
 
 
+def extract_currency_values(line: str) -> list[float]:
+    """Extract all numeric values from a text line as floats."""
+    return [float(x) for x in re.findall(r"[\d.]+", line)]
+
+
 def read_text_from_file(file_path: Path) -> str:
     if file_path.suffix.lower() == ".pdf":
         reader = PdfReader(str(file_path))
@@ -507,6 +512,7 @@ REQUIRED_SCHEMA_FIELDS = [
     "employee",
     "pay_date",
     "week_start",
+    "net_this_pay",
 ]
 
 
@@ -545,6 +551,99 @@ def rename_for_excel(df: pd.DataFrame) -> pd.DataFrame:
     """Rename dataframe columns to human-readable headers for Excel output."""
     rename_map = {col: EXCEL_HEADERS.get(col, col) for col in df.columns}
     return df.rename(columns=rename_map)
+
+
+def add_pay_validation_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Add cross-check columns that verify parsed pay figures are internally consistent.
+
+    For each record the function computes:
+    - ``ordinary_check``  — hours × rate ≈ pay_this  (within $0.02 rounding tolerance)
+    - ``weekend_check``   — same check for weekend pay
+    - ``public_holiday_check`` — same check for public holiday pay
+    - ``gross_check``     — sum of all three *_pay_this ≈ gross_this_pay
+    - ``net_check``       — gross − tax − payg ≈ net_this_pay
+    - ``overall_pay_check`` — PASS only when every individual check above is PASS
+
+    Values are ``"PASS"``, ``"FAIL"``, or ``"N/A"`` when the inputs needed for the
+    check are absent or non-numeric.
+    """
+    _TOL = 0.02
+
+    def _numeric(val) -> float | None:
+        try:
+            v = float(val)
+            return v if v == v else None  # reject NaN
+        except (TypeError, ValueError):
+            return None
+
+    def _hours_rate_check(hours_val, rate_val, pay_val) -> str:
+        h, r, p = _numeric(hours_val), _numeric(rate_val), _numeric(pay_val)
+        if h is None or r is None or p is None:
+            return "N/A"
+        return "PASS" if abs(h * r - p) <= _TOL else "FAIL"
+
+    out = df.copy()
+
+    out["ordinary_check"] = [
+        _hours_rate_check(r["ordinary_hours"], r["ordinary_rate"], r["ordinary_pay_this"])
+        for _, r in df.iterrows()
+    ]
+    out["weekend_check"] = [
+        _hours_rate_check(r["weekend_hours"], r["weekend_rate"], r["weekend_pay_this"])
+        for _, r in df.iterrows()
+    ]
+    out["public_holiday_check"] = [
+        _hours_rate_check(r["public_holiday_hours"], r["public_holiday_rate"], r["public_holiday_pay_this"])
+        for _, r in df.iterrows()
+    ]
+
+    gross_checks = []
+    net_checks = []
+    for _, r in df.iterrows():
+        ord_pay = _numeric(r["ordinary_pay_this"]) or 0.0
+        wk_pay = _numeric(r["weekend_pay_this"]) or 0.0
+        ph_pay = _numeric(r["public_holiday_pay_this"]) or 0.0
+        gross = _numeric(r["gross_this_pay"])
+        if gross is None:
+            gross_checks.append("N/A")
+        else:
+            gross_checks.append("PASS" if abs(ord_pay + wk_pay + ph_pay - gross) <= _TOL else "FAIL")
+
+        tax = _numeric(r["tax_this_pay"]) or 0.0
+        payg = _numeric(r["payg_this_pay"]) or 0.0
+        net = _numeric(r["net_this_pay"])
+        if gross is None or net is None:
+            net_checks.append("N/A")
+        else:
+            net_checks.append("PASS" if abs(gross - tax - payg - net) <= _TOL else "FAIL")
+
+    out["gross_check"] = gross_checks
+    out["net_check"] = net_checks
+
+    overall = []
+    check_cols = ["ordinary_check", "weekend_check", "public_holiday_check", "gross_check", "net_check"]
+    for _, r in out.iterrows():
+        values = [r[c] for c in check_cols]
+        if any(v == "FAIL" for v in values):
+            overall.append("FAIL")
+        elif all(v == "PASS" for v in values):
+            overall.append("PASS")
+        else:
+            overall.append("N/A")
+    out["overall_pay_check"] = overall
+
+    return out
+
+
+def _write_excel(xlsx_path: Path, df: pd.DataFrame, missing_weeks: list[str]) -> None:
+    """Write the main payslips sheet and the missing_weeks sheet, then apply formatting."""
+    with pd.ExcelWriter(xlsx_path, engine="openpyxl") as writer:
+        rename_for_excel(df).to_excel(writer, index=False, sheet_name="payslips")
+        pd.DataFrame({"missing_week_start": missing_weeks}).to_excel(
+            writer, index=False, sheet_name="missing_weeks", header=["Week Start"]
+        )
+    format_excel_output(xlsx_path)
+
 
 def run() -> None:
     project_root = Path(__file__).resolve().parents[1]
@@ -587,30 +686,12 @@ def run() -> None:
 
     # Try to write Excel file; if locked, use timestamped backup
     try:
-        with pd.ExcelWriter(xlsx_path, engine="openpyxl") as writer:
-            # Rename columns to human-readable headers
-
-            df_excel = rename_for_excel(df)
-
-            df_excel.to_excel(writer, index=False, sheet_name="payslips")
-            pd.DataFrame({"missing_week_start": missing_weeks}).to_excel(
-                writer, index=False, sheet_name="missing_weeks", header=["Week Start"]
-            )
-        format_excel_output(xlsx_path)
+        _write_excel(xlsx_path, df, missing_weeks)
     except PermissionError:
         from datetime import datetime as dt
         backup_name = f"payslips_{dt.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         xlsx_path = output_dir / backup_name
-        with pd.ExcelWriter(xlsx_path, engine="openpyxl") as writer:
-            # Rename columns to human-readable headers
-
-            df_excel = rename_for_excel(df)
-
-            df_excel.to_excel(writer, index=False, sheet_name="payslips")
-            pd.DataFrame({"missing_week_start": missing_weeks}).to_excel(
-                writer, index=False, sheet_name="missing_weeks", header=["Week Start"]
-            )
-        format_excel_output(xlsx_path)
+        _write_excel(xlsx_path, df, missing_weeks)
         print(f"(Note: Main file was locked, saved as: {backup_name})")
 
     df.to_csv(csv_path, index=False)
