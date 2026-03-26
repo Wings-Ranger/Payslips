@@ -495,6 +495,45 @@ def format_excel_output(xlsx_path: Path) -> None:
 
 
 
+
+
+# Mapping of backend field names to human-readable Excel headers
+EXCEL_HEADERS = {
+    "file_name": "File Name",
+    "employee": "Employee",
+    "pay_date": "Pay Date",
+    "pay_period": "Pay Period",
+    "week_start": "Week Start",
+    "ordinary_hours": "Ordinary Hours",
+    "ordinary_rate": "Ordinary Rate",
+    "ordinary_pay_this": "Ordinary Pay (This)",
+    "ordinary_pay_ytd": "Ordinary Pay (YTD)",
+    "weekend_hours": "Weekend Hours",
+    "weekend_rate": "Weekend Rate",
+    "weekend_pay_this": "Weekend Pay (This)",
+    "weekend_pay_ytd": "Weekend Pay (YTD)",
+    "public_holiday_hours": "Public Holiday Hours",
+    "public_holiday_rate": "Public Holiday Rate",
+    "public_holiday_pay_this": "Public Holiday Pay (This)",
+    "public_holiday_pay_ytd": "Public Holiday Pay (YTD)",
+    "gross_this_pay": "Gross Pay (This)",
+    "gross_ytd": "Gross Pay (YTD)",
+    "tax_this_pay": "Tax (This)",
+    "tax_ytd": "Tax (YTD)",
+    "payg_this_pay": "PAYG (This)",
+    "payg_ytd": "PAYG (YTD)",
+    "net_this_pay": "Net Pay (This)",
+    "net_ytd": "Net Pay (YTD)",
+    "total_hours_this_pay": "Total Hours",
+    "notes": "Notes",
+}
+
+
+def rename_for_excel(df: pd.DataFrame) -> pd.DataFrame:
+    """Rename dataframe columns to human-readable headers for Excel output."""
+    rename_map = {col: EXCEL_HEADERS.get(col, col) for col in df.columns}
+    return df.rename(columns=rename_map)
+
 def run() -> None:
     project_root = Path(__file__).resolve().parents[1]
     config = load_config(project_root)
@@ -530,9 +569,13 @@ def run() -> None:
     # Try to write Excel file; if locked, use timestamped backup
     try:
         with pd.ExcelWriter(xlsx_path, engine="openpyxl") as writer:
-            df.to_excel(writer, index=False, sheet_name="payslips")
+            # Rename columns to human-readable headers
+
+            df_excel = rename_for_excel(df)
+
+            df_excel.to_excel(writer, index=False, sheet_name="payslips")
             pd.DataFrame({"missing_week_start": missing_weeks}).to_excel(
-                writer, index=False, sheet_name="missing_weeks"
+                writer, index=False, sheet_name="missing_weeks", header=["Week Start"]
             )
         format_excel_output(xlsx_path)
     except PermissionError:
@@ -540,9 +583,13 @@ def run() -> None:
         backup_name = f"payslips_{dt.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         xlsx_path = output_dir / backup_name
         with pd.ExcelWriter(xlsx_path, engine="openpyxl") as writer:
-            df.to_excel(writer, index=False, sheet_name="payslips")
+            # Rename columns to human-readable headers
+
+            df_excel = rename_for_excel(df)
+
+            df_excel.to_excel(writer, index=False, sheet_name="payslips")
             pd.DataFrame({"missing_week_start": missing_weeks}).to_excel(
-                writer, index=False, sheet_name="missing_weeks"
+                writer, index=False, sheet_name="missing_weeks", header=["Week Start"]
             )
         format_excel_output(xlsx_path)
         print(f"(Note: Main file was locked, saved as: {backup_name})")
