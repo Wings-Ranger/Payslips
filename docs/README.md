@@ -28,9 +28,10 @@ Payslips/
 3. `parse_payslip()` extracts structured fields via regex into `PayslipRecord`
 4. `append_validation_notes()` flags records missing required schema fields
 5. DataFrame is built, sorted by `week_start`, and N/A-filled for empty pay sections
-6. `find_missing_weeks()` detects gaps in weekly payslip coverage
-7. Excel output with `rename_for_excel()` human-readable headers + `format_excel_output()` styling
-8. CSV export for external tooling
+6. `add_pay_validation_columns()` appends cross-check columns verifying internal pay consistency
+7. `find_missing_weeks()` detects gaps in weekly payslip coverage
+8. Excel output with `rename_for_excel()` human-readable headers + `format_excel_output()` styling
+9. CSV export for external tooling
 
 ### PayslipRecord Fields (27 fields)
 
@@ -65,7 +66,7 @@ Payslips/
 
 ### Schema Validation
 
-Required fields: `file_name`, `employee`, `pay_date`, `week_start`
+Required fields: `file_name`, `employee`, `pay_date`, `week_start`, `net_this_pay`
 
 Records missing required fields get `SCHEMA_INVALID` appended to notes.
 
@@ -80,8 +81,8 @@ Records missing required fields get `SCHEMA_INVALID` appended to notes.
 | `output_filename` | `"payslips.xlsx"` | Excel filename |
 | `supported_extensions` | `[".pdf", ".txt"]` | File types to process |
 | `week_start_day` | `"monday"` | First day of pay week |
-| `currency` | `"AUD"` | Currency label |
-| `field_aliases` | `{}` | Custom label mappings |
+| `currency_symbol` | `"AUD"` | Currency label (informational — not used in calculations). |
+| `field_aliases` | (see `src/config.json`) | Maps canonical field names to alternative label strings found in payslip text. Reserved for future alias-driven parsing. |
 
 ## Setup
 

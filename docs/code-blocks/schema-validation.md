@@ -24,6 +24,7 @@ REQUIRED_SCHEMA_FIELDS = [
     "employee",
     "pay_date",
     "week_start",
+    "net_this_pay",
 ]
 
 
@@ -78,7 +79,7 @@ if "SCHEMA_INVALID" in record.notes:
 
 ### Extending the required fields list
 
-To require additional fields (e.g. `net_this_pay`), simply add the field name to the list:
+`net_this_pay` is already required by default. To require additional fields (e.g. `pay_period`), simply add the field name to the list:
 
 ```python
 REQUIRED_SCHEMA_FIELDS = [
@@ -86,6 +87,7 @@ REQUIRED_SCHEMA_FIELDS = [
     "employee",
     "pay_date",
     "week_start",
-    "net_this_pay",   # added
+    "net_this_pay",
+    "pay_period",   # added
 ]
 ```
