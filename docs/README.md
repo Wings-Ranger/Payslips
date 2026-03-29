@@ -12,6 +12,7 @@ Payslips/
   src/
     config.json          # Runtime configuration
     payslip_tracker.py   # Main application
+    payslip_gui.py       # Desktop GUI launcher
   scripts/               # Dev/debug utilities
   tests/                 # Unit tests
   docs/
@@ -30,15 +31,17 @@ Payslips/
 
 ### Data Flow
 
-1. `run()` scans `input/` for supported files (`.pdf`, `.txt`)
-2. `read_text_from_file()` extracts raw text (PyPDF2 for PDFs)
-3. `parse_payslip()` extracts structured fields via regex into `PayslipRecord`
-4. `append_validation_notes()` flags records missing required schema fields
-5. DataFrame is built, sorted by `week_start`, and N/A-filled for empty pay sections
-6. `add_pay_validation_columns()` appends cross-check columns verifying internal pay consistency
-7. `find_missing_weeks()` detects gaps in weekly payslip coverage
-8. Excel output with `rename_for_excel()` human-readable headers + `format_excel_output()` styling
-9. CSV export for external tooling
+1. `Process Payslips.bat` launches the desktop GUI on Windows.
+2. `payslip_gui.py` collects input/output folders, remembers recent locations, and starts processing in a background thread.
+3. `process_payslips()` scans the chosen input folder for supported files (`.pdf`, `.txt`).
+4. `read_text_from_file()` extracts raw text (PyPDF2 for PDFs).
+5. `parse_payslip()` extracts structured fields via regex into `PayslipRecord`.
+6. `append_validation_notes()` flags records missing required schema fields.
+7. DataFrame is built, sorted by `week_start`, and N/A-filled for empty pay sections.
+8. `find_missing_weeks()` detects gaps in weekly payslip coverage.
+9. Excel output with `rename_for_excel()` human-readable headers + `format_excel_output()` styling.
+10. CSV export is written for external tooling.
+11. GUI shows progress, summary counts, and errors, then lets the user open the spreadsheet.
 
 ### PayslipRecord Fields (27 fields)
 
@@ -91,13 +94,21 @@ Records missing required fields get `SCHEMA_INVALID` appended to notes.
 | `currency_symbol` | `"AUD"` | Currency label (informational — not used in calculations). |
 | `field_aliases` | (see `src/config.json`) | Maps canonical field names to alternative label strings found in payslip text. Reserved for future alias-driven parsing. |
 
+`load_config()` looks for config in packaged and source layouts, then merges the file over built-in defaults.
+
 ## Setup
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r docs/requirements.txt
-python src/payslip_tracker.py
+python src/payslip_gui.py
+```
+
+For a packaged Windows build:
+
+```powershell
+scripts\build_exe.bat
 ```
 
 ## Dependencies

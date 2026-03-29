@@ -1,101 +1,72 @@
-# run — Main Orchestration Function
+# run / process_payslips — Main Orchestration Layer
 
 **File:** `src/payslip_tracker.py`
 
 ## What It Is
 
-`run()` is the entry point that ties every component together. When `payslip_tracker.py` is executed directly (via the batch file or command line), Python calls this function. It:
+`process_payslips()` is the reusable orchestration layer for the application. It is called by the GUI, tests, and the console wrapper `run()`. The smaller `run()` function now prints a console summary around the result returned by `process_payslips()`.
+
+The processing pipeline:
 
 1. Resolves the project root and loads config.
-2. Scans the `input/` directory for supported file types.
-3. Extracts text from each file and parses it into a `PayslipRecord`.
-4. Runs schema validation on every record.
-5. Builds a sorted pandas DataFrame from all records.
-6. Fills N/A for pay sections that are absent in a given payslip.
-7. Detects missing weeks.
-8. Writes a formatted Excel workbook (with a timestamped fallback name if the file is locked).
-9. Writes a CSV export.
-10. Prints a run summary to the console.
+2. Resolves input/output folders from config or explicit overrides.
+3. Scans the chosen input directory for supported file types.
+4. Extracts text from each file and parses it into a `PayslipRecord`.
+5. Runs schema validation on every record.
+6. Builds a sorted pandas DataFrame from all records.
+7. Fills N/A for pay sections that are absent in a given payslip.
+8. Detects missing weeks.
+9. Writes a formatted Excel workbook (with a timestamped fallback name if the file is locked).
+10. Writes a CSV export.
+11. Returns a `ProcessResult` for the caller.
+
+The console wrapper:
+
+1. Calls `process_payslips()`.
+2. Prints a console summary.
+3. Handles the no-files-found case with a user-friendly message.
 
 ## Code Block
 
 ```python
 from pathlib import Path
-from dataclasses import asdict
-from datetime import datetime as dt
-import pandas as pd
+from typing import Callable
 
-def _write_excel(xlsx_path: Path, df: pd.DataFrame, missing_weeks: list[str]) -> None:
-    """Write the main payslips sheet and the missing_weeks sheet, then apply formatting."""
-    with pd.ExcelWriter(xlsx_path, engine="openpyxl") as writer:
-        rename_for_excel(df).to_excel(writer, index=False, sheet_name="payslips")
-        pd.DataFrame({"missing_week_start": missing_weeks}).to_excel(
-            writer, index=False, sheet_name="missing_weeks", header=["Week Start"]
-        )
-    format_excel_output(xlsx_path)
+@dataclass
+class ProcessResult:
+    input_dir: Path
+    output_dir: Path
+    files_found: int
+    processed_count: int
+    skipped_count: int
+    schema_invalid_count: int
+    missing_weeks: list[str]
+    xlsx_path: Path
+    csv_path: Path
+    opened_spreadsheet: bool = False
 
+
+def process_payslips(
+    *,
+    project_root: Path | None = None,
+    input_dir: Path | str | None = None,
+    output_dir: Path | str | None = None,
+    open_spreadsheet: bool = False,
+    status_callback: Callable[[str], None] | None = None,
+) -> ProcessResult:
+    ...
 
 def run() -> None:
-    project_root = Path(__file__).resolve().parents[1]
-    config = load_config(project_root)
-
-    input_dir  = project_root / config.get("input_dir", "input")
-    output_dir = project_root / config.get("output_dir", "output")
-    output_dir.mkdir(parents=True, exist_ok=True)
-    input_dir.mkdir(parents=True, exist_ok=True)
-
-    supported = {ext.lower() for ext in config.get("supported_extensions", [".pdf", ".txt"])}
-    files = [f for f in input_dir.iterdir() if f.is_file() and f.suffix.lower() in supported]
-
-    if not files:
-        print(f"No payslip files found in: {input_dir}")
+    try:
+        result = process_payslips()
+    except FileNotFoundError as exc:
+        print(exc)
         print("Add PDF/TXT payslips to input/ and re-run.")
         return
 
-    records: list[PayslipRecord] = []
-    for file_path in sorted(files):
-        text   = read_text_from_file(file_path)
-        record = parse_payslip(file_path, text, config)
-        record = append_validation_notes(record)
-        records.append(record)
-
-    df = pd.DataFrame([asdict(r) for r in records])
-    df = df.sort_values(
-        by=["week_start", "pay_date", "file_name"], na_position="last"
-    ).reset_index(drop=True)
-
-    # Fill pay fields with N/A when not applicable
-    ph_cols  = ["public_holiday_hours", "public_holiday_rate", "public_holiday_pay_this", "public_holiday_pay_ytd"]
-    wk_cols  = ["weekend_hours", "weekend_rate", "weekend_pay_this", "weekend_pay_ytd"]
-    ord_cols = ["ordinary_hours", "ordinary_rate", "ordinary_pay_this", "ordinary_pay_ytd"]
-    df[ph_cols + wk_cols + ord_cols] = df[ph_cols + wk_cols + ord_cols].fillna("N/A")
-
-    missing_weeks = find_missing_weeks(df)
-
-    xlsx_path = output_dir / config.get("output_filename", "payslips.xlsx")
-    csv_path  = output_dir / "payslips.csv"
-
-    # Write Excel — fall back to timestamped name if the file is locked
-    try:
-        _write_excel(xlsx_path, df, missing_weeks)
-    except PermissionError:
-        backup_name = f"payslips_{dt.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-        xlsx_path = output_dir / backup_name
-        _write_excel(xlsx_path, df, missing_weeks)
-        print(f"(Note: Main file was locked, saved as: {backup_name})")
-
-    df.to_csv(csv_path, index=False)
-
-    print(f"Processed {len(df)} payslip file(s)")
-    print(f"Spreadsheet: {xlsx_path}")
-    print(f"CSV: {csv_path}")
-
-    if missing_weeks:
-        print("Missing weekly payslips detected:")
-        for w in missing_weeks:
-            print(f"  - {w}")
-    else:
-        print("No missing weekly payslips detected in the observed range.")
+    print(f"Processed {result.processed_count} payslip file(s)")
+    print(f"Spreadsheet: {result.xlsx_path}")
+    print(f"CSV: {result.csv_path}")
 
 
 if __name__ == "__main__":
@@ -104,16 +75,19 @@ if __name__ == "__main__":
 
 ## How to Re-Implement
 
-1. Use `Path(__file__).resolve().parents[1]` to locate the project root relative to the script, making the entry point portable.
-2. Use `.mkdir(parents=True, exist_ok=True)` for both `input/` and `output/` so first-time runs create the directories automatically.
-3. Catch `PermissionError` when writing the Excel file so a locked spreadsheet does not crash the whole run — write a timestamped backup instead.
-4. Keep the N/A fill step before `find_missing_weeks` so null checks in that function are unaffected.
-5. Separate the `_write_excel` helper to avoid duplicating the pandas/openpyxl write logic in both the try and except branches.
+1. Keep a reusable service function separate from console/UI code.
+2. Accept directory overrides so a GUI or tests can control runtime paths without editing config.
+3. Use a result object to return counts, output paths, and missing weeks cleanly.
+4. Keep status reporting callback-based so the GUI can show progress without coupling the processing code to Tkinter.
+5. Preserve a tiny `run()` wrapper for command-line compatibility.
 
 ### Running
 
 ```powershell
-# Windows — double-click or:
+# Windows GUI
+python src\payslip_gui.py
+
+# Windows console wrapper
 python src\payslip_tracker.py
 
 # macOS / Linux

@@ -6,7 +6,7 @@ Convert parsed records into a consistent tabular form for sorting, enrichment, a
 
 ## Where Used
 
-- `run()` in `src/payslip_tracker.py`
+- `process_payslips()` in `src/payslip_tracker.py`
 
 ## Pipeline Stages
 

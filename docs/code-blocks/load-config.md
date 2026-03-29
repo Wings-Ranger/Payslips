@@ -4,27 +4,48 @@
 
 ## What It Is
 
-`load_config` loads the JSON configuration file (`src/config.json`) relative to the project root and returns it as a Python dict. It raises a descriptive `FileNotFoundError` if the config file is missing, preventing silent failures at startup.
+`load_config` loads the JSON configuration file and merges it over built-in defaults. It supports both source-tree and packaged-app layouts by checking multiple candidate locations before raising `FileNotFoundError`.
 
 ## Code Block
 
 ```python
 import json
+import sys
 from pathlib import Path
 
+
+DEFAULT_CONFIG = {
+    "week_start_day": "monday",
+    "currency_symbol": "AUD",
+    "input_dir": "input",
+    "output_dir": "output",
+    "output_filename": "payslips.xlsx",
+    "supported_extensions": [".pdf", ".txt"],
+}
+
+
+def _candidate_config_paths(project_root: Path) -> list[Path]:
+    candidates = [project_root / "src" / "config.json", project_root / "config.json"]
+    bundle_root = getattr(sys, "_MEIPASS", None)
+    if bundle_root:
+        bundle_path = Path(bundle_root)
+        candidates.extend([bundle_path / "src" / "config.json", bundle_path / "config.json"])
+    return candidates
+
 def load_config(project_root: Path) -> dict:
-    config_path = project_root / "src" / "config.json"
-    if not config_path.exists():
-        raise FileNotFoundError(f"Missing config file: {config_path}")
-    with config_path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+    for config_path in _candidate_config_paths(project_root):
+        if config_path.exists():
+            with config_path.open("r", encoding="utf-8") as f:
+                loaded = json.load(f)
+            return {**DEFAULT_CONFIG, **loaded}
+    raise FileNotFoundError("Missing config file")
 ```
 
 ## How to Re-Implement
 
 1. Accept the project root as a `Path` argument so the function is portable and testable regardless of the working directory.
-2. Build the config path relative to that root.
-3. Check `.exists()` before opening to give a clear error message.
+2. Check source and packaged-app paths rather than assuming only one layout.
+3. Merge the loaded file over in-code defaults so missing keys do not crash the app.
 4. Open with `encoding="utf-8"` to handle any Unicode characters in the config.
 
 ### Usage
@@ -32,7 +53,7 @@ def load_config(project_root: Path) -> dict:
 ```python
 from pathlib import Path
 
-project_root = Path(__file__).resolve().parents[1]  # two levels up from src/
+project_root = Path(__file__).resolve().parents[1]
 config = load_config(project_root)
 
 input_dir  = project_root / config.get("input_dir", "input")
@@ -42,5 +63,5 @@ week_start = config.get("week_start_day", "monday")
 
 ### Config file location
 
-The function expects the config at `<project_root>/src/config.json`.  
+The function first checks `<project_root>/src/config.json`, then `<project_root>/config.json`, and also packaged-app locations when running under PyInstaller.
 See [`config-json.md`](config-json.md) for the full schema and all available keys.

@@ -4,7 +4,7 @@
 
 ## What It Is
 
-`config.json` is the runtime configuration file for the Payslip Tracker. It is loaded once at startup by `load_config()` and passed through to the parsing and output functions.
+`config.json` is the runtime configuration file for the Payslip Tracker. It is loaded once at startup by `load_config()`, merged over built-in defaults, and passed through to the parsing and output functions.
 
 ## Current Content
 
@@ -43,15 +43,27 @@
 
 ## How to Re-Implement
 
-Create `src/config.json` in your project with the keys above. To load it:
+Create `src/config.json` in your project with the keys above. For packaged builds, the same file is bundled into the application. To load it:
 
 ```python
 import json
+import sys
 from pathlib import Path
 
-config_path = Path(__file__).resolve().parents[1] / "src" / "config.json"
-with config_path.open("r", encoding="utf-8") as f:
-    config = json.load(f)
+project_root = Path(__file__).resolve().parents[1]
+candidates = [project_root / "src" / "config.json", project_root / "config.json"]
+bundle_root = getattr(sys, "_MEIPASS", None)
+if bundle_root:
+  bundle_path = Path(bundle_root)
+  candidates.extend([bundle_path / "src" / "config.json", bundle_path / "config.json"])
+
+for config_path in candidates:
+  if config_path.exists():
+    with config_path.open("r", encoding="utf-8") as f:
+      config = json.load(f)
+    break
+else:
+  raise FileNotFoundError("Missing config file")
 
 week_start  = config.get("week_start_day", "monday")
 input_dir   = Path(config.get("input_dir", "input"))

@@ -19,7 +19,14 @@ For technique-level guidance (patterns that span multiple functions/files), see 
 | [excel-headers-and-rename.md](excel-headers-and-rename.md) | `EXCEL_HEADERS` + `rename_for_excel()` | Map snake_case field names to human-readable Excel headers |
 | [pay-validation-columns.md](pay-validation-columns.md) | `add_pay_validation_columns()` | Append cross-check columns verifying internal pay figure consistency |
 | [schema-validation.md](schema-validation.md) | `REQUIRED_SCHEMA_FIELDS` + `validate_record_schema()` + `append_validation_notes()` | Flag records with missing required fields |
+| [process-payslips-service.md](process-payslips-service.md) | `process_payslips()` + `ProcessResult` | Reusable processing pipeline for console, GUI, and tests |
 | [run-entrypoint.md](run-entrypoint.md) | `run()` + `_write_excel()` | Main orchestration function — scan, parse, validate, export |
+
+## Desktop UI (`src/payslip_gui.py`)
+
+| File | Code Block | Description |
+|------|------------|-------------|
+| [payslip-gui.md](payslip-gui.md) | `PayslipTrackerApp` | Tkinter desktop interface for folder selection, progress, summary, and errors |
 
 ## Configuration
 

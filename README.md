@@ -4,10 +4,13 @@ A simple tool that reads your payslip files and creates an organised spreadsheet
 
 ## How to Use
 
-1. Put your payslip files (PDF or TXT) into the **input** folder
-2. Double-click **Process Payslips.bat**
-3. Wait for it to finish - the spreadsheet will open automatically
-4. Your reports are saved in the **output** folder
+1. Double-click **Process Payslips.bat**
+2. Choose your **input** folder and **output** folder in the app window
+3. Click **Run**
+4. Review the progress, summary, and any errors in the app
+5. Click **Open Spreadsheet** when processing is complete
+
+The app remembers recently used input and output folders so repeat runs are quicker.
 
 ## What You Get
 
@@ -42,6 +45,11 @@ Use the Code Blocks docs when you need exact behavior for a specific function.
 - Make sure Python is installed on your computer
 - Ask your IT team to install Python if needed
 
+**The app shows an error panel**
+- Read the message in the Errors section of the window
+- Check that your input folder contains .pdf or .txt payslip files
+- If needed, try a different output folder where Excel files can be saved
+
 **"No payslip files found"**
 - Check that your payslip files are in the **input** folder
 - Files must be .pdf or .txt format
@@ -53,7 +61,7 @@ Use the Code Blocks docs when you need exact behavior for a specific function.
 
 **The spreadsheet won't update**
 - Close the spreadsheet in Excel first, then run again
-- If it was locked, a backup copy is saved with a timestamp
+- If it was locked, a backup copy is saved with a timestamp and shown in the summary
 
 ## Privacy
 

@@ -1,7 +1,7 @@
 @echo off
-cd /d %~dp0
+cd /d %~dp0\..
 echo Building Payslip Tracker .exe ...
-pyinstaller --noconfirm --clean --name "Payslip Tracker" --distpath dist --workpath build\pyinstaller --specpath build src\payslip_tracker.py
+pyinstaller --noconfirm "build\Payslip Tracker.spec"
 if %errorlevel% neq 0 (
     echo Build failed.
     pause
@@ -9,5 +9,6 @@ if %errorlevel% neq 0 (
 )
 echo.
 echo Build complete. The exe is in: dist\Payslip Tracker\
-echo Share this folder along with input/, output/, and src/config.json
+echo Config is bundled into the app build.
+echo Share this folder along with input/ and output/ if needed.
 pause

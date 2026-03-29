@@ -6,8 +6,9 @@ Keep environment-specific choices and evolving parser aliases outside applicatio
 
 ## Where Used
 
-- `load_config()` and `run()` in `src/payslip_tracker.py`
+- `load_config()`, `process_payslips()`, and `get_project_root()` in `src/payslip_tracker.py`
 - `src/config.json`
+- packaged PyInstaller builds that bundle config into the app
 
 ## Configurable Concerns
 
@@ -27,7 +28,7 @@ Keep environment-specific choices and evolving parser aliases outside applicatio
 
 1. Resolve all runtime paths from project root with `Path`.
 2. Keep safe defaults in code for missing keys.
-3. Validate config file existence early and fail with clear error text.
+3. Check both source-tree and packaged-app config locations.
 4. Add new config keys in docs and tests together.
 
 ## Common Pitfalls

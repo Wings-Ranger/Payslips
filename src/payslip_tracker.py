@@ -1,15 +1,37 @@
 import json
+import os
 import re
+import sys
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 import pandas as pd
 from PyPDF2 import PdfReader
 from dateutil import parser as date_parser
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+
+
+DEFAULT_CONFIG = {
+    "week_start_day": "monday",
+    "currency_symbol": "AUD",
+    "input_dir": "input",
+    "output_dir": "output",
+    "output_filename": "payslips.xlsx",
+    "supported_extensions": [".pdf", ".txt"],
+    "field_aliases": {
+        "gross": ["gross", "gross pay", "total gross", "total earnings"],
+        "net": ["net", "net pay", "take home"],
+        "tax": ["tax", "paye", "income tax", "payg"],
+        "ni": ["ni", "national insurance", "super", "superannuation"],
+        "hours": ["hours", "hours worked", "total hours", "ordinary hours", "weekends"],
+        "pay_date": ["payment date", "date paid", "pay date"],
+        "pay_period": ["pay period"],
+        "employee": ["employee", "name", "employee name"],
+    },
+}
 
 
 @dataclass
@@ -47,12 +69,50 @@ class PayslipRecord:
     notes: str = ""
 
 
+@dataclass
+class ProcessResult:
+    input_dir: Path
+    output_dir: Path
+    files_found: int
+    processed_count: int
+    skipped_count: int
+    schema_invalid_count: int
+    missing_weeks: list[str]
+    xlsx_path: Path
+    csv_path: Path
+    opened_spreadsheet: bool = False
+
+
+def get_project_root() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parents[1]
+
+
+def _candidate_config_paths(project_root: Path) -> list[Path]:
+    candidates = [
+        project_root / "src" / "config.json",
+        project_root / "config.json",
+    ]
+    bundle_root = getattr(sys, "_MEIPASS", None)
+    if bundle_root:
+        bundle_path = Path(bundle_root)
+        candidates.extend([
+            bundle_path / "src" / "config.json",
+            bundle_path / "config.json",
+        ])
+    return candidates
+
+
 def load_config(project_root: Path) -> dict:
-    config_path = project_root / "src" / "config.json"
-    if not config_path.exists():
-        raise FileNotFoundError(f"Missing config file: {config_path}")
-    with config_path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+    for config_path in _candidate_config_paths(project_root):
+        if config_path.exists():
+            with config_path.open("r", encoding="utf-8") as f:
+                loaded = json.load(f)
+            return {**DEFAULT_CONFIG, **loaded}
+
+    tried = "\n".join(str(path) for path in _candidate_config_paths(project_root))
+    raise FileNotFoundError(f"Missing config file. Checked:\n{tried}")
 
 
 def extract_currency_values(line: str) -> list[float]:
@@ -645,12 +705,45 @@ def _write_excel(xlsx_path: Path, df: pd.DataFrame, missing_weeks: list[str]) ->
     format_excel_output(xlsx_path)
 
 
-def run() -> None:
-    project_root = Path(__file__).resolve().parents[1]
+def _resolve_runtime_path(project_root: Path, override: Path | str | None, config_value: str) -> Path:
+    if override is None:
+        path = Path(config_value)
+    else:
+        path = Path(override)
+    if not path.is_absolute():
+        path = project_root / path
+    return path
+
+
+def open_in_default_app(path: Path) -> None:
+    if os.name == "nt":
+        os.startfile(path)
+        return
+    raise OSError(f"Opening files is not supported on this platform: {os.name}")
+
+
+def process_payslips(
+    *,
+    project_root: Path | None = None,
+    input_dir: Path | str | None = None,
+    output_dir: Path | str | None = None,
+    open_spreadsheet: bool = False,
+    status_callback: Callable[[str], None] | None = None,
+) -> ProcessResult:
+    project_root = project_root or get_project_root()
     config = load_config(project_root)
 
-    input_dir = project_root / config.get("input_dir", "input")
-    output_dir = project_root / config.get("output_dir", "output")
+    resolved_input_dir = _resolve_runtime_path(project_root, input_dir, config.get("input_dir", "input"))
+    resolved_output_dir = _resolve_runtime_path(project_root, output_dir, config.get("output_dir", "output"))
+
+    def _status(message: str) -> None:
+        if status_callback is not None:
+            status_callback(message)
+
+    _status("Preparing input and output folders...")
+
+    input_dir = resolved_input_dir
+    output_dir = resolved_output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
     input_dir.mkdir(parents=True, exist_ok=True)
 
@@ -658,18 +751,19 @@ def run() -> None:
     files = [f for f in input_dir.iterdir() if f.is_file() and f.suffix.lower() in supported]
 
     if not files:
-        print(f"No payslip files found in: {input_dir}")
-        print("Add PDF/TXT payslips to input/ and re-run.")
-        return
+        raise FileNotFoundError(f"No payslip files found in: {input_dir}")
 
+    _status(f"Found {len(files)} payslip file(s).")
     records: list[PayslipRecord] = []
 
-    for file_path in sorted(files):
+    for index, file_path in enumerate(sorted(files), start=1):
+        _status(f"Processing {index}/{len(files)}: {file_path.name}")
         text = read_text_from_file(file_path)
         record = parse_payslip(file_path, text, config)
         record = append_validation_notes(record)
         records.append(record)
 
+    _status("Building spreadsheet data...")
     df = pd.DataFrame([asdict(r) for r in records])
     df = df.sort_values(by=["week_start", "pay_date", "file_name"], na_position="last").reset_index(drop=True)
 
@@ -686,24 +780,64 @@ def run() -> None:
 
     # Try to write Excel file; if locked, use timestamped backup
     try:
+        _status("Writing Excel workbook...")
         _write_excel(xlsx_path, df, missing_weeks)
     except PermissionError:
         from datetime import datetime as dt
         backup_name = f"payslips_{dt.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         xlsx_path = output_dir / backup_name
+        _status(f"Main workbook is locked. Saving backup as {backup_name}...")
         _write_excel(xlsx_path, df, missing_weeks)
-        print(f"(Note: Main file was locked, saved as: {backup_name})")
 
+    _status("Writing CSV export...")
     df.to_csv(csv_path, index=False)
 
-    print(f"Processed {len(df)} payslip file(s)")
-    print(f"Spreadsheet: {xlsx_path}")
-    print(f"CSV: {csv_path}")
+    opened_spreadsheet = False
+    if open_spreadsheet:
+        _status("Opening spreadsheet...")
+        open_in_default_app(xlsx_path)
+        opened_spreadsheet = True
 
-    if missing_weeks:
+    skipped_count = sum("SKIPPED" in (record.notes or "").upper() for record in records)
+    schema_invalid_count = sum("SCHEMA_INVALID" in (record.notes or "") for record in records)
+
+    _status("Processing complete.")
+
+    return ProcessResult(
+        input_dir=input_dir,
+        output_dir=output_dir,
+        files_found=len(files),
+        processed_count=len(records),
+        skipped_count=skipped_count,
+        schema_invalid_count=schema_invalid_count,
+        missing_weeks=missing_weeks,
+        xlsx_path=xlsx_path,
+        csv_path=csv_path,
+        opened_spreadsheet=opened_spreadsheet,
+    )
+
+
+def run() -> None:
+    try:
+        result = process_payslips()
+    except FileNotFoundError as exc:
+        print(exc)
+        print("Add PDF/TXT payslips to input/ and re-run.")
+        return
+
+    print(f"Processed {result.processed_count} payslip file(s)")
+    print(f"Spreadsheet: {result.xlsx_path}")
+    print(f"CSV: {result.csv_path}")
+
+    if result.skipped_count:
+        print(f"Skipped scanned/unreadable files: {result.skipped_count}")
+    if result.schema_invalid_count:
+        print(f"Records with missing required fields: {result.schema_invalid_count}")
+
+    if result.missing_weeks:
         print("Missing weekly payslips detected:")
-        for w in missing_weeks:
-            print(f" - {w}")
+        for week_start in result.missing_weeks:
+            print(f" - {week_start}")
     else:
         print("No missing weekly payslips detected in the observed range.")
 
