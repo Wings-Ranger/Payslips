@@ -46,7 +46,6 @@ Payslips/
 10. CSV export is written for external tooling.
 11. GUI shows progress, summary counts, and errors, then lets the user open the spreadsheet.
 12. Users can edit `ui_theme.json` and reload the visual theme without restarting the app.
-13. If a bundled executable exists, the launcher uses that first for portable USB usage.
 
 ### PayslipRecord Fields (27 fields)
 
@@ -121,14 +120,6 @@ For a packaged Windows build:
 ```powershell
 scripts\build_exe.bat
 ```
-
-For a USB-ready portable bundle:
-
-```powershell
-scripts\make_portable_bundle.bat
-```
-
-This creates `portable\Payslip Tracker Portable\` with a self-contained runtime and a `Run Payslip Tracker.bat` launcher.
 
 ## Dependencies
 

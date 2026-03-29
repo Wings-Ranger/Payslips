@@ -13,16 +13,6 @@ A simple tool that reads your payslip files and creates an organised spreadsheet
 The app remembers recently used input and output folders so repeat runs are quicker.
 It also reads styling from [ui_theme.json](ui_theme.json), and you can change the look live with **Open Theme File** plus **Reload Theme**.
 
-## Portable USB Mode (No Python Install Needed)
-
-You can build a self-contained portable bundle that runs without installing Python on the target machine.
-
-1. On a build machine, run `scripts\make_portable_bundle.bat`
-2. Copy `portable\Payslip Tracker Portable\` to a USB drive
-3. On the target machine, run `Run Payslip Tracker.bat` inside that folder
-
-The launcher automatically prefers a bundled executable when available.
-
 ## What You Get
 
 - **payslips.xlsx** - A colour-coded spreadsheet with all your payslip data
@@ -55,7 +45,6 @@ Use the Code Blocks docs when you need exact behavior for a specific function.
 **Nothing happens when I double-click the bat file**
 - Make sure Python is installed on your computer
 - Ask your IT team to install Python if needed
-- Or use the portable USB bundle so Python is not required on that machine
 
 **The app shows an error panel**
 - Read the message in the Errors section of the window
