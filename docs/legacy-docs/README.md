@@ -11,6 +11,7 @@ These files are kept for historical/reference purposes only. They should not be 
 
 ## Contents
 
+- [readme-history/README.md](readme-history/README.md): commit-by-commit archive of historical README snapshots.
 - [pre-gui/root-README.md](pre-gui/root-README.md): old root project README
 - [pre-gui/README.md](pre-gui/README.md): old technical overview
 - [pre-gui/coding-techniques/README.md](pre-gui/coding-techniques/README.md): old coding-techniques index
