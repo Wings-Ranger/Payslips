@@ -25,6 +25,17 @@ A simple tool that reads your payslip files and creates an organised spreadsheet
 | **output** | Your reports appear here after running |
 | **src** | The program files (no need to touch these) |
 
+## Technique Map (Developer Docs)
+
+If you are extending or maintaining the project, start here:
+
+- [Technical Docs Overview](docs/README.md) - architecture, configuration, and setup
+- [Coding Techniques Index](docs/coding-techniques/README.md) - one note per reusable coding technique
+- [Code Blocks Index](docs/code-blocks/README.md) - one note per concrete function or script block
+
+Use the Coding Techniques docs when deciding how to implement changes.
+Use the Code Blocks docs when you need exact behavior for a specific function.
+
 ## Troubleshooting
 
 **Nothing happens when I double-click the bat file**

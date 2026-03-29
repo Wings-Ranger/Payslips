@@ -2,6 +2,8 @@
 
 This directory contains one Markdown file per unique code block in the Payslips repository. Each file explains what the block does and how to re-implement it from scratch.
 
+For technique-level guidance (patterns that span multiple functions/files), see [../coding-techniques/README.md](../coding-techniques/README.md).
+
 ## Core Application (`src/payslip_tracker.py`)
 
 | File | Code Block | Description |

@@ -16,8 +16,15 @@ Payslips/
   tests/                 # Unit tests
   docs/
     README.md            # This file
+    coding-techniques/   # Technique-oriented implementation notes
+    code-blocks/         # Function-by-function code block notes
     requirements.txt     # Python dependencies
 ```
+
+## Documentation Sets
+
+- [coding-techniques/README.md](coding-techniques/README.md): one file per reusable coding technique used across the repository.
+- [code-blocks/README.md](code-blocks/README.md): one file per concrete code block or function.
 
 ## Architecture
 
