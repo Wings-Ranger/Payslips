@@ -44,7 +44,6 @@ Use the Code Blocks docs when you need exact behavior for a specific function.
 
 **Nothing happens when I double-click the bat file**
 - Make sure Python is installed on your computer
-- Ask your IT team to install Python if needed
 
 **The app shows an error panel**
 - Read the message in the Errors section of the window
