@@ -3,6 +3,20 @@
 This directory contains one Markdown file per unique code block in the Payslips repository. Each file explains what the block does and how to re-implement it from scratch.
 
 For technique-level guidance (patterns that span multiple functions/files), see [../coding-techniques/README.md](../coding-techniques/README.md).
+For beginner prerequisite concepts, see [../building-blocks/README.md](../building-blocks/README.md).
+
+## Beginner Implementation Order
+
+1. Start with [../building-blocks/implementation-basics.md](../building-blocks/implementation-basics.md).
+2. Choose one code block below.
+3. Follow that file's "How to Re-Implement" section.
+4. Open linked building-block notes first if the code block uses advanced concepts.
+
+## When This Is Not The Best Fit
+
+- If requirements are much simpler, a smaller implementation may be easier to maintain.
+- If requirements are broader, copy the intent, not the exact line-by-line structure.
+- Debug scripts are intentionally lightweight and may need hardening before production use.
 
 ## Core Application (`src/payslip_tracker.py`)
 

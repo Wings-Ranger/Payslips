@@ -36,9 +36,22 @@ If you are extending or maintaining the project, start here:
 - [Technical Docs Overview](docs/README.md) - architecture, configuration, and setup
 - [Coding Techniques Index](docs/coding-techniques/README.md) - one note per reusable coding technique
 - [Code Blocks Index](docs/code-blocks/README.md) - one note per concrete function or script block
+- [Building Blocks (Beginner Path)](docs/building-blocks/README.md) - beginner-first explanations for advanced concepts
 
 Use the Coding Techniques docs when deciding how to implement changes.
 Use the Code Blocks docs when you need exact behavior for a specific function.
+
+## If A Concept Feels Too Advanced
+
+1. Start with [docs/building-blocks/implementation-basics.md](docs/building-blocks/implementation-basics.md).
+2. Open the advanced doc again and follow its re-implementation section.
+3. Use the linked building-block prerequisites in that doc before coding.
+
+## When Not To Copy An Implementation Exactly
+
+- Payslip formats vary, so parser regex from one employer may not fit another.
+- UI theme examples are safe to copy, but processing/business logic should be validated with tests.
+- Debug scripts are for diagnosis; avoid turning them into production workflows without refactoring.
 
 ## Troubleshooting
 

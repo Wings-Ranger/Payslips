@@ -34,3 +34,22 @@ Extract structured fields from semi-structured payslip text without requiring a 
   - Mitigation: add aliases in config and tests for new formats.
 - Risk: Numeric token regex can over-capture malformed values.
   - Mitigation: wrap float conversion in try/except and preserve parse notes.
+## Beginner Ramp-Up
+
+If this feels advanced, read these first:
+
+- [../building-blocks/implementation-basics.md](../building-blocks/implementation-basics.md)
+- [../building-blocks/configuration-and-paths.md](../building-blocks/configuration-and-paths.md)
+- [../building-blocks/python-data-models.md](../building-blocks/python-data-models.md)
+- [../building-blocks/regex-basics.md](../building-blocks/regex-basics.md)
+- [../building-blocks/dataframe-basics.md](../building-blocks/dataframe-basics.md)
+- [../building-blocks/testing-basics.md](../building-blocks/testing-basics.md)
+- [../building-blocks/tkinter-basics.md](../building-blocks/tkinter-basics.md)
+
+Follow this order: building block -> this file's implementation steps -> tests.
+
+## When This Is Not The Best Fit
+
+- If your requirements are much simpler, prefer a smaller implementation.
+- If your input format differs heavily, adapt the pattern rather than copying it exactly.
+- If this is a one-time script, consider readability-first code before framework-style structure.

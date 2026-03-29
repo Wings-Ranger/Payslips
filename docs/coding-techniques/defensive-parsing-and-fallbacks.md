@@ -29,3 +29,22 @@ Preserve pipeline stability when input quality is inconsistent (scanned PDFs, mi
 2. Keep notes machine-searchable (`SCHEMA_INVALID`, `SKIPPED`).
 3. Distinguish parse-time anomalies from business-rule validation failures.
 4. Add a focused unit test each time a new fallback path is introduced.
+## Beginner Ramp-Up
+
+If this feels advanced, read these first:
+
+- [../building-blocks/implementation-basics.md](../building-blocks/implementation-basics.md)
+- [../building-blocks/configuration-and-paths.md](../building-blocks/configuration-and-paths.md)
+- [../building-blocks/python-data-models.md](../building-blocks/python-data-models.md)
+- [../building-blocks/regex-basics.md](../building-blocks/regex-basics.md)
+- [../building-blocks/dataframe-basics.md](../building-blocks/dataframe-basics.md)
+- [../building-blocks/testing-basics.md](../building-blocks/testing-basics.md)
+- [../building-blocks/tkinter-basics.md](../building-blocks/tkinter-basics.md)
+
+Follow this order: building block -> this file's implementation steps -> tests.
+
+## When This Is Not The Best Fit
+
+- If your requirements are much simpler, prefer a smaller implementation.
+- If your input format differs heavily, adapt the pattern rather than copying it exactly.
+- If this is a one-time script, consider readability-first code before framework-style structure.

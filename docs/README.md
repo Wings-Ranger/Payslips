@@ -28,7 +28,21 @@ Payslips/
 - [coding-techniques/README.md](coding-techniques/README.md): one file per reusable coding technique used across the repository.
 - [code-blocks/README.md](code-blocks/README.md): one file per concrete code block or function.
 - [theme-guide/README.md](theme-guide/README.md): field-by-field guide to `ui_theme.json` with links to the relevant GUI code lines.
+- [building-blocks/README.md](building-blocks/README.md): beginner-first foundation notes for advanced topics.
 - [legacy-docs/README.md](legacy-docs/README.md): archived pre-GUI documentation kept for reference only.
+
+## Beginner Ramp-Up Path
+
+1. Read [building-blocks/implementation-basics.md](building-blocks/implementation-basics.md).
+2. Pick one target from [code-blocks/README.md](code-blocks/README.md).
+3. If the target uses advanced ideas (regex, DataFrame, threading), open the matching building-block note first.
+4. Return to the target doc and follow its re-implementation checklist.
+
+## When Not To Reuse A Pattern As-Is
+
+- Re-validate parser assumptions for each payroll template.
+- Keep UI customization separate from processing rules.
+- Prefer simpler implementations for one-off scripts, but keep robust patterns in production paths.
 
 ## Architecture
 

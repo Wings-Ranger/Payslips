@@ -23,3 +23,13 @@ Unlike docs/code-blocks (which is organized by function or file block), these no
 1. Start with this index to select a technique.
 2. Open the linked technique file for implementation details and guardrails.
 3. Cross-reference docs/code-blocks when you need exact code-level behavior.
+## Beginner Ramp-Up
+
+This is a legacy document. For beginner-friendly foundations, start with [../../../building-blocks/README.md](../../../building-blocks/README.md).
+Then return here only if you specifically need the pre-GUI historical implementation details.
+
+## When This Is Not The Best Fit
+
+- This file documents an older architecture and may not match the current app flow.
+- Prefer current docs in docs/code-blocks and docs/coding-techniques for active implementation work.
+- Use this as reference context, not as a copy-paste template.

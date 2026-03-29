@@ -44,3 +44,13 @@ For technique-level guidance (patterns that span multiple functions/files), see 
 | [script-show-lines.md](../../code-blocks/script-show-lines.md) | `show_lines.py` | Print the first 25 raw text lines of a payslip file |
 | [script-update-headers.md](../../code-blocks/script-update-headers.md) | `update_headers.py` | One-time migration script that added human-readable Excel headers |
 | [script-view-sheets.md](../../code-blocks/script-view-sheets.md) | `view_sheets.py` | Dump all rows from named Excel sheets to the console |
+## Beginner Ramp-Up
+
+This is a legacy document. For beginner-friendly foundations, start with [../../../building-blocks/README.md](../../../building-blocks/README.md).
+Then return here only if you specifically need the pre-GUI historical implementation details.
+
+## When This Is Not The Best Fit
+
+- This file documents an older architecture and may not match the current app flow.
+- Prefer current docs in docs/code-blocks and docs/coding-techniques for active implementation work.
+- Use this as reference context, not as a copy-paste template.

@@ -29,3 +29,22 @@ Make the frontend easy to restyle without requiring users to edit Python widget 
 2. Prefer named sections over many scattered variables.
 3. Separate visual theme settings from runtime processing settings.
 4. Document a few safe first edits so beginners know where to start.
+## Beginner Ramp-Up
+
+If this feels advanced, read these first:
+
+- [../building-blocks/implementation-basics.md](../building-blocks/implementation-basics.md)
+- [../building-blocks/configuration-and-paths.md](../building-blocks/configuration-and-paths.md)
+- [../building-blocks/python-data-models.md](../building-blocks/python-data-models.md)
+- [../building-blocks/regex-basics.md](../building-blocks/regex-basics.md)
+- [../building-blocks/dataframe-basics.md](../building-blocks/dataframe-basics.md)
+- [../building-blocks/testing-basics.md](../building-blocks/testing-basics.md)
+- [../building-blocks/tkinter-basics.md](../building-blocks/tkinter-basics.md)
+
+Follow this order: building block -> this file's implementation steps -> tests.
+
+## When This Is Not The Best Fit
+
+- If your requirements are much simpler, prefer a smaller implementation.
+- If your input format differs heavily, adapt the pattern rather than copying it exactly.
+- If this is a one-time script, consider readability-first code before framework-style structure.

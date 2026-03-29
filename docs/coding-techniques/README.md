@@ -4,6 +4,8 @@ This directory documents the higher-level coding techniques used in this reposit
 
 Unlike docs/code-blocks (which is organized by function or file block), these notes are organized by technique so future changes can reuse patterns consistently.
 
+If you are new to these concepts, start with [../building-blocks/README.md](../building-blocks/README.md) before diving into advanced technique notes.
+
 ## Technique Notes
 
 | File | Technique | Where It Appears |
@@ -24,3 +26,9 @@ Unlike docs/code-blocks (which is organized by function or file block), these no
 1. Start with this index to select a technique.
 2. Open the linked technique file for implementation details and guardrails.
 3. Cross-reference docs/code-blocks when you need exact code-level behavior.
+
+## When A Technique May Not Be The Best Choice
+
+- Prefer simpler direct code for one-off scripts.
+- Prefer robust documented patterns for reusable production paths.
+- Adjust each technique to the payslip/provider format instead of copying blindly.

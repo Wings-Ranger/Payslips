@@ -58,3 +58,13 @@ Use the Code Blocks docs when you need exact behavior for a specific function.
 ## Privacy
 
 All your payslip data stays on your computer. Nothing is sent online.
+## Beginner Ramp-Up
+
+This is a legacy document. For beginner-friendly foundations, start with [../../building-blocks/README.md](../../building-blocks/README.md).
+Then return here only if you specifically need the pre-GUI historical implementation details.
+
+## When This Is Not The Best Fit
+
+- This file documents an older architecture and may not match the current app flow.
+- Prefer current docs in docs/code-blocks and docs/coding-techniques for active implementation work.
+- Use this as reference context, not as a copy-paste template.

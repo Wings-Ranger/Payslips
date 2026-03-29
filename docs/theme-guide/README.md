@@ -4,6 +4,8 @@ This guide explains what each part of `ui_theme.json` changes in the app and lin
 
 Use this when you want to restyle the frontend without editing Python code.
 
+If JSON or Tkinter concepts are new, read [../building-blocks/configuration-and-paths.md](../building-blocks/configuration-and-paths.md) and [../building-blocks/tkinter-basics.md](../building-blocks/tkinter-basics.md) first.
+
 ## Important Rule
 
 `ui_theme.json` must stay valid JSON.
@@ -79,3 +81,9 @@ Use this when you want to restyle the frontend without editing Python code.
 2. Change `colors.app_bg` and `colors.panel_bg` to shift the whole mood.
 3. Change `fonts.title` to make the app feel more formal, modern, or playful.
 4. Change `labels.title` and `labels.subtitle` to customize the app wording.
+
+## When This Is Not The Best Fit
+
+- If a control is missing, theme edits alone cannot add new behavior.
+- If processing logic is wrong, fix parser/service code instead of changing labels/colors.
+- If JSON changes become complex or repetitive, move repeated decisions into Python defaults.

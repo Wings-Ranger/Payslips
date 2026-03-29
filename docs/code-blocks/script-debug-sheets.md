@@ -56,3 +56,22 @@ print(weekly_df.dtypes)
 4. Run from the project root: `python scripts/debug_sheets.py`.
 
 > **⚠ Not runnable in current state:** `create_summary_sheet`, `create_monthly_breakdown`, and `create_weekly_summary` are not present in the current `payslip_tracker.py`. Running this script will raise an `ImportError`. It is kept as a development template for when those aggregation features are added. Once implemented, run from the project root with `python scripts/debug_sheets.py`.
+## Beginner Ramp-Up
+
+If this feels advanced, read these first:
+
+- [../building-blocks/implementation-basics.md](../building-blocks/implementation-basics.md)
+- [../building-blocks/configuration-and-paths.md](../building-blocks/configuration-and-paths.md)
+- [../building-blocks/python-data-models.md](../building-blocks/python-data-models.md)
+- [../building-blocks/regex-basics.md](../building-blocks/regex-basics.md)
+- [../building-blocks/dataframe-basics.md](../building-blocks/dataframe-basics.md)
+- [../building-blocks/testing-basics.md](../building-blocks/testing-basics.md)
+- [../building-blocks/tkinter-basics.md](../building-blocks/tkinter-basics.md)
+
+Follow this order: building block -> this file's implementation steps -> tests.
+
+## When This Is Not The Best Fit
+
+- If your requirements are much simpler, prefer a smaller implementation.
+- If your input format differs heavily, adapt the pattern rather than copying it exactly.
+- If this is a one-time script, consider readability-first code before framework-style structure.
