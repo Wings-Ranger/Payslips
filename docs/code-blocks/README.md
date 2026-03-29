@@ -33,6 +33,7 @@ For technique-level guidance (patterns that span multiple functions/files), see 
 | File | Code Block | Description |
 |------|------------|-------------|
 | [config-json.md](config-json.md) | `src/config.json` | Runtime configuration schema and all available keys |
+| [ui-theme-json.md](ui-theme-json.md) | `ui_theme.json` | Beginner-editable GUI theme file with live reload support |
 
 ## Windows Entry Point
 

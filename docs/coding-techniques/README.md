@@ -15,6 +15,7 @@ Unlike docs/code-blocks (which is organized by function or file block), these no
 | [dataframe-transformation-pipeline.md](dataframe-transformation-pipeline.md) | DataFrame pipeline for normalization and export prep | src/payslip_tracker.py |
 | [business-rule-validation-columns.md](business-rule-validation-columns.md) | Cross-field validation with tolerance-based checks | src/payslip_tracker.py, tests/test_sheets.py |
 | [excel-presentation-layer-formatting.md](excel-presentation-layer-formatting.md) | Presentation-layer formatting in openpyxl | src/payslip_tracker.py |
+| [theme-driven-ui-customization.md](theme-driven-ui-customization.md) | Theme-driven GUI styling with live reload | ui_theme.json, src/payslip_gui.py |
 | [test-first-parser-coverage.md](test-first-parser-coverage.md) | Focused unit testing around parser and calculations | tests/test_parser.py, tests/test_sheets.py |
 | [operations-and-debug-tooling.md](operations-and-debug-tooling.md) | Small-purpose scripts for diagnosis and migration | scripts/*.py |
 

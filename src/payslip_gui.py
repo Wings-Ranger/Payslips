@@ -12,6 +12,79 @@ from tkinter.scrolledtext import ScrolledText
 from payslip_tracker import ProcessResult, get_project_root, load_config, open_in_default_app, process_payslips
 
 
+DEFAULT_THEME = {
+    "window": {
+        "title": "Payslip Tracker",
+        "geometry": "980x760",
+        "min_width": 860,
+        "min_height": 640,
+    },
+    "fonts": {
+        "title": ["Georgia", 22, "bold"],
+        "subtitle": ["Segoe UI", 10],
+        "section": ["Segoe UI Semibold", 11],
+        "body": ["Segoe UI", 10],
+        "button": ["Segoe UI Semibold", 10],
+        "mono": ["Consolas", 10],
+        "summary": ["Consolas", 10],
+    },
+    "colors": {
+        "app_bg": "#f4efe6",
+        "panel_bg": "#fffaf2",
+        "panel_border": "#d8c3a3",
+        "text": "#2f2618",
+        "muted_text": "#75654a",
+        "accent": "#1f6f5f",
+        "accent_hover": "#18584b",
+        "accent_text": "#ffffff",
+        "secondary_bg": "#e7dcc8",
+        "secondary_text": "#2f2618",
+        "input_bg": "#fffdf8",
+        "input_fg": "#2f2618",
+        "status_bg": "#fffdf9",
+        "status_fg": "#2f2618",
+        "summary_bg": "#f7f0e3",
+        "summary_fg": "#2f2618",
+        "error_bg": "#fff0ec",
+        "error_fg": "#8d2d1d",
+    },
+    "spacing": {
+        "outer_padding": 18,
+        "panel_padding": 14,
+        "section_gap": 14,
+    },
+    "labels": {
+        "title": "Payslip Tracker",
+        "subtitle": "Choose folders, run processing, review results, and tune the theme live.",
+        "theme_hint": "Edit ui_theme.json and click Reload Theme to restyle the app.",
+        "controls_title": "Folders and Actions",
+        "status_title": "Progress and Status",
+        "summary_title": "Summary",
+        "errors_title": "Errors",
+        "input_label": "Input folder",
+        "output_label": "Output folder",
+        "run_button": "Run",
+        "open_button": "Open Spreadsheet",
+        "clear_button": "Clear Status",
+        "reload_button": "Reload Theme",
+        "edit_button": "Open Theme File",
+        "ready": "Ready.",
+        "no_run": "No run yet.",
+        "running": "Running...",
+    },
+}
+
+
+def _deep_merge(base: dict, overrides: dict) -> dict:
+    merged = dict(base)
+    for key, value in overrides.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
 class PayslipTrackerApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
@@ -19,23 +92,26 @@ class PayslipTrackerApp:
         self.config = self._load_defaults()
         self.state_path = self.project_root / ".payslip_tracker_ui.json"
         self.ui_state = self._load_ui_state()
+        self.theme_path = self._resolve_theme_path()
+        self.theme = self._load_theme()
         self.queue: queue.Queue[tuple[str, object]] = queue.Queue()
         self.last_result: ProcessResult | None = None
         self.worker: threading.Thread | None = None
+        self.style = ttk.Style(self.root)
 
         self.input_history = self._merge_history("input", self.project_root / self.config.get("input_dir", "input"))
         self.output_history = self._merge_history("output", self.project_root / self.config.get("output_dir", "output"))
 
         self.input_var = tk.StringVar(value=self.input_history[0])
         self.output_var = tk.StringVar(value=self.output_history[0])
-        self.summary_var = tk.StringVar(value="No run yet.")
+        self.summary_var = tk.StringVar(value=self.theme["labels"]["no_run"])
 
-        self.root.title("Payslip Tracker")
-        self.root.geometry("920x720")
-        self.root.minsize(820, 620)
+        self.root.title(self.theme["window"]["title"])
+        self.root.geometry(self.theme["window"]["geometry"])
+        self.root.minsize(self.theme["window"]["min_width"], self.theme["window"]["min_height"])
 
-        self._configure_style()
         self._build_ui()
+        self._apply_theme(initial=True)
         self.root.after(100, self._poll_queue)
 
     def _load_defaults(self) -> dict:
@@ -43,6 +119,24 @@ class PayslipTrackerApp:
             return load_config(self.project_root)
         except Exception:
             return {}
+
+    def _resolve_theme_path(self) -> Path:
+        candidates = [
+            self.project_root / "ui_theme.json",
+            self.project_root / "src" / "ui_theme.json",
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        return self.project_root / "ui_theme.json"
+
+    def _load_theme(self) -> dict:
+        theme = DEFAULT_THEME
+        if self.theme_path.exists():
+            with self.theme_path.open("r", encoding="utf-8") as handle:
+                loaded = json.load(handle)
+            theme = _deep_merge(DEFAULT_THEME, loaded)
+        return theme
 
     def _load_ui_state(self) -> dict:
         if not self.state_path.exists():
@@ -85,80 +179,261 @@ class PayslipTrackerApp:
 
         self._save_ui_state()
 
-    def _configure_style(self) -> None:
-        style = ttk.Style()
-        if "vista" in style.theme_names():
-            style.theme_use("vista")
+    def _font(self, key: str) -> tuple:
+        value = self.theme["fonts"].get(key, DEFAULT_THEME["fonts"][key])
+        return tuple(value)
 
-        style.configure("Title.TLabel", font=("Segoe UI Semibold", 18))
-        style.configure("Section.TLabelframe.Label", font=("Segoe UI Semibold", 11))
-        style.configure("Summary.TLabel", font=("Consolas", 10))
+    def _configure_style(self) -> None:
+        colors = self.theme["colors"]
+        if "clam" in self.style.theme_names():
+            self.style.theme_use("clam")
+
+        self.style.configure("App.TFrame", background=colors["app_bg"])
+        self.style.configure(
+            "App.TLabel",
+            background=colors["app_bg"],
+            foreground=colors["text"],
+            font=self._font("body"),
+        )
+        self.style.configure(
+            "Title.TLabel",
+            background=colors["app_bg"],
+            foreground=colors["text"],
+            font=self._font("title"),
+        )
+        self.style.configure(
+            "Subtitle.TLabel",
+            background=colors["app_bg"],
+            foreground=colors["muted_text"],
+            font=self._font("subtitle"),
+        )
+        self.style.configure(
+            "ThemeHint.TLabel",
+            background=colors["app_bg"],
+            foreground=colors["muted_text"],
+            font=self._font("subtitle"),
+        )
+        self.style.configure(
+            "Card.TLabelframe",
+            background=colors["panel_bg"],
+            bordercolor=colors["panel_border"],
+            borderwidth=1,
+            relief="solid",
+        )
+        self.style.configure(
+            "Card.TLabelframe.Label",
+            background=colors["panel_bg"],
+            foreground=colors["text"],
+            font=self._font("section"),
+        )
+        self.style.configure(
+            "Summary.TLabel",
+            background=colors["summary_bg"],
+            foreground=colors["summary_fg"],
+            font=self._font("summary"),
+        )
+        self.style.configure(
+            "Primary.TButton",
+            background=colors["accent"],
+            foreground=colors["accent_text"],
+            font=self._font("button"),
+            borderwidth=0,
+            focusthickness=0,
+            padding=(14, 8),
+        )
+        self.style.map(
+            "Primary.TButton",
+            background=[("active", colors["accent_hover"]), ("disabled", colors["secondary_bg"])],
+            foreground=[("disabled", colors["muted_text"])],
+        )
+        self.style.configure(
+            "Secondary.TButton",
+            background=colors["secondary_bg"],
+            foreground=colors["secondary_text"],
+            font=self._font("button"),
+            borderwidth=0,
+            focusthickness=0,
+            padding=(12, 8),
+        )
+        self.style.map("Secondary.TButton", background=[("active", colors["panel_border"])])
+        self.style.configure(
+            "TCombobox",
+            fieldbackground=colors["input_bg"],
+            background=colors["input_bg"],
+            foreground=colors["input_fg"],
+            arrowsize=15,
+            padding=6,
+        )
+        self.style.map("TCombobox", fieldbackground=[("readonly", colors["input_bg"])])
 
     def _build_ui(self) -> None:
-        container = ttk.Frame(self.root, padding=16)
-        container.pack(fill="both", expand=True)
-        container.columnconfigure(0, weight=1)
-        container.rowconfigure(2, weight=1)
-        container.rowconfigure(3, weight=1)
+        outer_padding = self.theme["spacing"]["outer_padding"]
+        section_gap = self.theme["spacing"]["section_gap"]
+        panel_padding = self.theme["spacing"]["panel_padding"]
 
-        header = ttk.Frame(container)
-        header.grid(row=0, column=0, sticky="ew")
-        header.columnconfigure(0, weight=1)
-        ttk.Label(header, text="Payslip Tracker", style="Title.TLabel").grid(row=0, column=0, sticky="w")
-        ttk.Label(
-            header,
-            text="Choose folders, run processing, review results, and open the generated spreadsheet.",
-        ).grid(row=1, column=0, sticky="w", pady=(4, 0))
+        self.container = ttk.Frame(self.root, padding=outer_padding, style="App.TFrame")
+        self.container.pack(fill="both", expand=True)
+        self.container.columnconfigure(0, weight=1)
+        self.container.rowconfigure(2, weight=1)
+        self.container.rowconfigure(3, weight=1)
 
-        controls = ttk.LabelFrame(container, text="Folders and Actions", style="Section.TLabelframe", padding=12)
-        controls.grid(row=1, column=0, sticky="ew", pady=(16, 12))
-        controls.columnconfigure(1, weight=1)
+        self.header = ttk.Frame(self.container, style="App.TFrame")
+        self.header.grid(row=0, column=0, sticky="ew")
+        self.header.columnconfigure(0, weight=1)
 
-        ttk.Label(controls, text="Input folder").grid(row=0, column=0, sticky="w", pady=(0, 8))
-        self.input_combo = ttk.Combobox(controls, textvariable=self.input_var, values=self.input_history)
+        self.title_label = ttk.Label(self.header, style="Title.TLabel")
+        self.title_label.grid(row=0, column=0, sticky="w")
+        self.subtitle_label = ttk.Label(self.header, style="Subtitle.TLabel")
+        self.subtitle_label.grid(row=1, column=0, sticky="w", pady=(4, 2))
+        self.theme_hint_label = ttk.Label(self.header, style="ThemeHint.TLabel")
+        self.theme_hint_label.grid(row=2, column=0, sticky="w")
+
+        self.header_actions = ttk.Frame(self.header, style="App.TFrame")
+        self.header_actions.grid(row=0, column=1, rowspan=3, sticky="e")
+        self.edit_theme_button = ttk.Button(self.header_actions, command=self._open_theme_file, style="Secondary.TButton")
+        self.edit_theme_button.grid(row=0, column=0, padx=(8, 0))
+        self.reload_theme_button = ttk.Button(self.header_actions, command=self._reload_theme, style="Secondary.TButton")
+        self.reload_theme_button.grid(row=0, column=1, padx=(8, 0))
+
+        self.controls = ttk.LabelFrame(self.container, style="Card.TLabelframe", padding=panel_padding)
+        self.controls.grid(row=1, column=0, sticky="ew", pady=(section_gap, 12))
+        self.controls.columnconfigure(1, weight=1)
+
+        self.input_label = ttk.Label(self.controls, style="App.TLabel")
+        self.input_label.grid(row=0, column=0, sticky="w", pady=(0, 8))
+        self.input_combo = ttk.Combobox(self.controls, textvariable=self.input_var, values=self.input_history)
         self.input_combo.grid(row=0, column=1, sticky="ew", padx=8, pady=(0, 8))
-        ttk.Button(controls, text="Browse...", command=self._pick_input_dir).grid(row=0, column=2, sticky="ew", pady=(0, 8))
+        self.input_browse_button = ttk.Button(self.controls, command=self._pick_input_dir, style="Secondary.TButton")
+        self.input_browse_button.grid(row=0, column=2, sticky="ew", pady=(0, 8))
 
-        ttk.Label(controls, text="Output folder").grid(row=1, column=0, sticky="w")
-        self.output_combo = ttk.Combobox(controls, textvariable=self.output_var, values=self.output_history)
+        self.output_label = ttk.Label(self.controls, style="App.TLabel")
+        self.output_label.grid(row=1, column=0, sticky="w")
+        self.output_combo = ttk.Combobox(self.controls, textvariable=self.output_var, values=self.output_history)
         self.output_combo.grid(row=1, column=1, sticky="ew", padx=8)
-        ttk.Button(controls, text="Browse...", command=self._pick_output_dir).grid(row=1, column=2, sticky="ew")
+        self.output_browse_button = ttk.Button(self.controls, command=self._pick_output_dir, style="Secondary.TButton")
+        self.output_browse_button.grid(row=1, column=2, sticky="ew")
 
-        buttons = ttk.Frame(controls)
-        buttons.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(14, 0))
-        buttons.columnconfigure(3, weight=1)
+        self.buttons = ttk.Frame(self.controls, style="App.TFrame")
+        self.buttons.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(14, 0))
+        self.buttons.columnconfigure(4, weight=1)
 
-        self.run_button = ttk.Button(buttons, text="Run", command=self._start_run)
+        self.run_button = ttk.Button(self.buttons, command=self._start_run, style="Primary.TButton")
         self.run_button.grid(row=0, column=0, sticky="w")
-
-        self.open_button = ttk.Button(buttons, text="Open Spreadsheet", command=self._open_spreadsheet, state="disabled")
+        self.open_button = ttk.Button(self.buttons, command=self._open_spreadsheet, state="disabled", style="Secondary.TButton")
         self.open_button.grid(row=0, column=1, sticky="w", padx=(8, 0))
+        self.clear_button = ttk.Button(self.buttons, command=self._clear_panels, style="Secondary.TButton")
+        self.clear_button.grid(row=0, column=2, sticky="w", padx=(8, 0))
 
-        ttk.Button(buttons, text="Clear Status", command=self._clear_panels).grid(row=0, column=2, sticky="w", padx=(8, 0))
-
-        self.status_frame = ttk.LabelFrame(container, text="Progress and Status", style="Section.TLabelframe", padding=12)
+        self.status_frame = ttk.LabelFrame(self.container, style="Card.TLabelframe", padding=panel_padding)
         self.status_frame.grid(row=2, column=0, sticky="nsew", pady=(0, 12))
-        self.status_text = ScrolledText(self.status_frame, height=14, wrap="word", font=("Consolas", 10))
+        self.status_text = ScrolledText(self.status_frame, height=14, wrap="word")
         self.status_text.pack(fill="both", expand=True)
         self.status_text.configure(state="disabled")
 
-        lower = ttk.Frame(container)
-        lower.grid(row=3, column=0, sticky="nsew")
-        lower.columnconfigure(0, weight=1)
-        lower.columnconfigure(1, weight=1)
-        lower.rowconfigure(1, weight=1)
+        self.lower = ttk.Frame(self.container, style="App.TFrame")
+        self.lower.grid(row=3, column=0, sticky="nsew")
+        self.lower.columnconfigure(0, weight=1)
+        self.lower.columnconfigure(1, weight=1)
+        self.lower.rowconfigure(1, weight=1)
 
-        summary_frame = ttk.LabelFrame(lower, text="Summary", style="Section.TLabelframe", padding=12)
-        summary_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
-        ttk.Label(summary_frame, textvariable=self.summary_var, style="Summary.TLabel", justify="left").pack(fill="both", expand=True)
+        self.summary_frame = ttk.LabelFrame(self.lower, style="Card.TLabelframe", padding=panel_padding)
+        self.summary_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
+        self.summary_label = ttk.Label(self.summary_frame, textvariable=self.summary_var, style="Summary.TLabel", justify="left")
+        self.summary_label.pack(fill="both", expand=True)
 
-        errors_frame = ttk.LabelFrame(lower, text="Errors", style="Section.TLabelframe", padding=12)
-        errors_frame.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
-        self.error_text = ScrolledText(errors_frame, height=8, wrap="word", font=("Consolas", 10), foreground="#8B0000")
+        self.errors_frame = ttk.LabelFrame(self.lower, style="Card.TLabelframe", padding=panel_padding)
+        self.errors_frame.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
+        self.error_text = ScrolledText(self.errors_frame, height=8, wrap="word")
         self.error_text.pack(fill="both", expand=True)
         self.error_text.configure(state="disabled")
 
-        self._append_status("Ready.")
+    def _apply_theme(self, initial: bool = False) -> None:
+        colors = self.theme["colors"]
+        labels = self.theme["labels"]
+        spacing = self.theme["spacing"]
+
+        self.root.configure(bg=colors["app_bg"])
+        self.root.title(self.theme["window"]["title"])
+        self.root.minsize(self.theme["window"]["min_width"], self.theme["window"]["min_height"])
+        if initial:
+            self.root.geometry(self.theme["window"]["geometry"])
+
+        self._configure_style()
+
+        self.container.configure(padding=spacing["outer_padding"])
+        self.controls.configure(text=labels["controls_title"], padding=spacing["panel_padding"])
+        self.status_frame.configure(text=labels["status_title"], padding=spacing["panel_padding"])
+        self.summary_frame.configure(text=labels["summary_title"], padding=spacing["panel_padding"])
+        self.errors_frame.configure(text=labels["errors_title"], padding=spacing["panel_padding"])
+
+        self.title_label.configure(text=labels["title"])
+        self.subtitle_label.configure(text=labels["subtitle"])
+        self.theme_hint_label.configure(text=f"{labels['theme_hint']}  File: {self.theme_path}")
+        self.input_label.configure(text=labels["input_label"])
+        self.output_label.configure(text=labels["output_label"])
+        self.run_button.configure(text=labels["run_button"])
+        self.open_button.configure(text=labels["open_button"])
+        self.clear_button.configure(text=labels["clear_button"])
+        self.reload_theme_button.configure(text=labels["reload_button"])
+        self.edit_theme_button.configure(text=labels["edit_button"])
+        self.input_browse_button.configure(text="Browse...")
+        self.output_browse_button.configure(text="Browse...")
+
+        if self.summary_var.get() in {"No run yet.", "No run yet", "Running...", "Running... "}:
+            if self.summary_var.get().startswith("Running"):
+                self.summary_var.set(labels["running"])
+            else:
+                self.summary_var.set(labels["no_run"])
+
+        self.summary_label.configure(style="Summary.TLabel")
+        self.status_text.configure(
+            font=self._font("mono"),
+            background=colors["status_bg"],
+            foreground=colors["status_fg"],
+            insertbackground=colors["status_fg"],
+            relief="solid",
+            borderwidth=1,
+            highlightthickness=1,
+            highlightbackground=colors["panel_border"],
+            highlightcolor=colors["accent"],
+            padx=8,
+            pady=8,
+        )
+        self.error_text.configure(
+            font=self._font("mono"),
+            background=colors["error_bg"],
+            foreground=colors["error_fg"],
+            insertbackground=colors["error_fg"],
+            relief="solid",
+            borderwidth=1,
+            highlightthickness=1,
+            highlightbackground=colors["panel_border"],
+            highlightcolor=colors["accent"],
+            padx=8,
+            pady=8,
+        )
+
+    def _reload_theme(self) -> None:
+        try:
+            self.theme = self._load_theme()
+            self._apply_theme()
+        except Exception as exc:
+            self._set_text(self.error_text, self._format_error(exc))
+            messagebox.showerror("Theme reload failed", f"Could not reload theme file:\n{exc}")
+            return
+        self._append_status(f"Theme reloaded from {self.theme_path}")
+
+    def _open_theme_file(self) -> None:
+        try:
+            if not self.theme_path.exists():
+                with self.theme_path.open("w", encoding="utf-8") as handle:
+                    json.dump(DEFAULT_THEME, handle, indent=2)
+            open_in_default_app(self.theme_path)
+        except Exception as exc:
+            self._set_text(self.error_text, self._format_error(exc))
+            messagebox.showerror("Theme file error", f"Could not open theme file:\n{exc}")
+            return
+        self._append_status(f"Opened theme file: {self.theme_path}")
 
     def _pick_input_dir(self) -> None:
         selected = filedialog.askdirectory(initialdir=self.input_var.get() or str(self.project_root))
@@ -173,7 +448,7 @@ class PayslipTrackerApp:
     def _clear_panels(self) -> None:
         self._set_text(self.status_text, "")
         self._set_text(self.error_text, "")
-        self.summary_var.set("No run yet.")
+        self.summary_var.set(self.theme["labels"]["no_run"])
 
     def _start_run(self) -> None:
         if self.worker is not None and self.worker.is_alive():
@@ -194,7 +469,7 @@ class PayslipTrackerApp:
         self.run_button.configure(state="disabled")
         self._set_text(self.error_text, "")
         self._set_text(self.status_text, "")
-        self.summary_var.set("Running...")
+        self.summary_var.set(self.theme["labels"]["running"])
         self._append_status("Starting payslip processing...")
 
         self.worker = threading.Thread(

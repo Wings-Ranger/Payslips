@@ -11,6 +11,7 @@ A simple tool that reads your payslip files and creates an organised spreadsheet
 5. Click **Open Spreadsheet** when processing is complete
 
 The app remembers recently used input and output folders so repeat runs are quicker.
+It also reads styling from [ui_theme.json](ui_theme.json), and you can change the look live with **Open Theme File** plus **Reload Theme**.
 
 ## What You Get
 
@@ -49,6 +50,11 @@ Use the Code Blocks docs when you need exact behavior for a specific function.
 - Read the message in the Errors section of the window
 - Check that your input folder contains .pdf or .txt payslip files
 - If needed, try a different output folder where Excel files can be saved
+
+**I want to change how the app looks**
+- Click **Open Theme File** in the app
+- Edit colours, fonts, labels, or window size in `ui_theme.json`
+- Click **Reload Theme** to apply the changes without restarting
 
 **"No payslip files found"**
 - Check that your payslip files are in the **input** folder

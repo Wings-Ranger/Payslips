@@ -7,6 +7,7 @@ Automatically parse payslip PDFs/TXT files, detect missing weeks, and generate f
 ```
 Payslips/
   Process Payslips.bat   # Entry point - double-click to run
+  ui_theme.json          # Beginner-editable GUI theme
   input/                 # Drop payslip files here
   output/                # Generated reports appear here
   src/
@@ -26,6 +27,7 @@ Payslips/
 
 - [coding-techniques/README.md](coding-techniques/README.md): one file per reusable coding technique used across the repository.
 - [code-blocks/README.md](code-blocks/README.md): one file per concrete code block or function.
+- [theme-guide/README.md](theme-guide/README.md): field-by-field guide to `ui_theme.json` with links to the relevant GUI code lines.
 - [legacy-docs/README.md](legacy-docs/README.md): archived pre-GUI documentation kept for reference only.
 
 ## Architecture
@@ -33,7 +35,7 @@ Payslips/
 ### Data Flow
 
 1. `Process Payslips.bat` launches the desktop GUI on Windows.
-2. `payslip_gui.py` collects input/output folders, remembers recent locations, and starts processing in a background thread.
+2. `payslip_gui.py` loads `ui_theme.json`, remembers recent locations, and starts processing in a background thread.
 3. `process_payslips()` scans the chosen input folder for supported files (`.pdf`, `.txt`).
 4. `read_text_from_file()` extracts raw text (PyPDF2 for PDFs).
 5. `parse_payslip()` extracts structured fields via regex into `PayslipRecord`.
@@ -43,6 +45,7 @@ Payslips/
 9. Excel output with `rename_for_excel()` human-readable headers + `format_excel_output()` styling.
 10. CSV export is written for external tooling.
 11. GUI shows progress, summary counts, and errors, then lets the user open the spreadsheet.
+12. Users can edit `ui_theme.json` and reload the visual theme without restarting the app.
 
 ### PayslipRecord Fields (27 fields)
 
@@ -96,6 +99,12 @@ Records missing required fields get `SCHEMA_INVALID` appended to notes.
 | `field_aliases` | (see `src/config.json`) | Maps canonical field names to alternative label strings found in payslip text. Reserved for future alias-driven parsing. |
 
 `load_config()` looks for config in packaged and source layouts, then merges the file over built-in defaults.
+
+`ui_theme.json`:
+
+- Controls the GUI window title, fonts, colors, spacing, and button/section labels.
+- Is intended to be beginner-editable without changing Python code.
+- Can be reloaded live from the GUI.
 
 ## Setup
 

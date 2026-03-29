@@ -1,0 +1,61 @@
+{
+  "window": {
+    "title": "Payslip Tracker",
+    "geometry": "980x760",
+    "min_width": 860,
+    "min_height": 640
+  },
+  "fonts": {
+    "title": ["Georgia", 22, "bold"],
+    "subtitle": ["Segoe UI", 10],
+    "section": ["Segoe UI Semibold", 11],
+    "body": ["Segoe UI", 10],
+    "button": ["Segoe UI Semibold", 10],
+    "mono": ["Consolas", 10],
+    "summary": ["Consolas", 10]
+  },
+  "colors": {
+    "app_bg": "#f4efe6",
+    "panel_bg": "#fffaf2",
+    "panel_border": "#d8c3a3",
+    "text": "#2f2618",
+    "muted_text": "#75654a",
+    "accent": "#1f6f5f",
+    "accent_hover": "#18584b",
+    "accent_text": "#ffffff",
+    "secondary_bg": "#e7dcc8",
+    "secondary_text": "#2f2618",
+    "input_bg": "#fffdf8",
+    "input_fg": "#2f2618",
+    "status_bg": "#fffdf9",
+    "status_fg": "#2f2618",
+    "summary_bg": "#f7f0e3",
+    "summary_fg": "#2f2618",
+    "error_bg": "#fff0ec",
+    "error_fg": "#8d2d1d"
+  },
+  "spacing": {
+    "outer_padding": 18,
+    "panel_padding": 14,
+    "section_gap": 14
+  },
+  "labels": {
+    "title": "Payslip Tracker",
+    "subtitle": "Choose folders, run processing, review results, and tune the theme live.",
+    "theme_hint": "Edit ui_theme.json and click Reload Theme to restyle the app.",
+    "controls_title": "Folders and Actions",
+    "status_title": "Progress and Status",
+    "summary_title": "Summary",
+    "errors_title": "Errors",
+    "input_label": "Input folder",
+    "output_label": "Output folder",
+    "run_button": "Run",
+    "open_button": "Open Spreadsheet",
+    "clear_button": "Clear Status",
+    "reload_button": "Reload Theme",
+    "edit_button": "Open Theme File",
+    "ready": "Ready.",
+    "no_run": "No run yet.",
+    "running": "Running..."
+  }
+}
