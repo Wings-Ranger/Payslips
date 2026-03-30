@@ -1,0 +1,2 @@
+# Optional GUI enhancements
+tkinterdnd2>=0.3.0  # Enables drag-and-drop file support in the Payslip Tracker GUI

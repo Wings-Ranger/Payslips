@@ -11,66 +11,74 @@ from tkinter.scrolledtext import ScrolledText
 
 from payslip_tracker import ProcessResult, get_project_root, load_config, open_in_default_app, process_payslips
 
+try:
+    from tkinterdnd2 import DND_FILES, DND_TEXT
+    HAS_DND = True
+except ImportError:
+    HAS_DND = False
+
 
 DEFAULT_THEME = {
     "window": {
         "title": "Payslip Tracker",
-        "geometry": "980x760",
-        "min_width": 860,
-        "min_height": 640,
+        "geometry": "1020x800",
+        "min_width": 900,
+        "min_height": 700,
     },
     "fonts": {
-        "title": ["Georgia", 22, "bold"],
-        "subtitle": ["Segoe UI", 10],
-        "section": ["Segoe UI Semibold", 11],
+        "title": ["Segoe UI", 28, "bold"],
+        "subtitle": ["Segoe UI", 11],
+        "section": ["Segoe UI Semibold", 12],
         "body": ["Segoe UI", 10],
-        "button": ["Segoe UI Semibold", 10],
-        "mono": ["Consolas", 10],
-        "summary": ["Consolas", 10],
+        "button": ["Segoe UI Semibold", 11],
+        "mono": ["Consolas", 9],
+        "summary": ["Consolas", 9],
     },
     "colors": {
-        "app_bg": "#f4efe6",
-        "panel_bg": "#fffaf2",
-        "panel_border": "#d8c3a3",
-        "text": "#2f2618",
-        "muted_text": "#75654a",
-        "accent": "#1f6f5f",
-        "accent_hover": "#18584b",
+        "app_bg": "#f5f7fa",
+        "panel_bg": "#ffffff",
+        "panel_border": "#e0e6ed",
+        "text": "#1a202c",
+        "muted_text": "#64748b",
+        "accent": "#3b82f6",
+        "accent_hover": "#2563eb",
         "accent_text": "#ffffff",
-        "secondary_bg": "#e7dcc8",
-        "secondary_text": "#2f2618",
-        "input_bg": "#fffdf8",
-        "input_fg": "#2f2618",
-        "status_bg": "#fffdf9",
-        "status_fg": "#2f2618",
-        "summary_bg": "#f7f0e3",
-        "summary_fg": "#2f2618",
-        "error_bg": "#fff0ec",
-        "error_fg": "#8d2d1d",
+        "secondary_bg": "#f1f5f9",
+        "secondary_text": "#475569",
+        "input_bg": "#ffffff",
+        "input_fg": "#1a202c",
+        "status_bg": "#f8fafc",
+        "status_fg": "#1a202c",
+        "summary_bg": "#eff6ff",
+        "summary_fg": "#1a202c",
+        "error_bg": "#fef2f2",
+        "error_fg": "#991b1b",
+        "drop_zone_bg": "#dbeafe",
+        "drop_zone_border": "#3b82f6",
     },
     "spacing": {
-        "outer_padding": 18,
-        "panel_padding": 14,
-        "section_gap": 14,
+        "outer_padding": 20,
+        "panel_padding": 16,
+        "section_gap": 16,
     },
     "labels": {
-        "title": "Payslip Tracker",
-        "subtitle": "Choose folders, run processing, review results, and tune the theme live.",
-        "theme_hint": "Edit ui_theme.json and click Reload Theme to restyle the app.",
-        "controls_title": "Folders and Actions",
-        "status_title": "Progress and Status",
-        "summary_title": "Summary",
-        "errors_title": "Errors",
-        "input_label": "Input folder",
+        "title": "📊 Payslip Tracker",
+        "subtitle": "Process payslips with drag-and-drop support. Edit ui_theme.json for custom styling.",
+        "theme_hint": "Customize the theme and click Reload",
+        "controls_title": "📁 Folders & Actions",
+        "status_title": "⚙️ Processing Status",
+        "summary_title": "📈 Summary",
+        "errors_title": "⚠️ Errors",
+        "input_label": "Drop files here or select input folder",
         "output_label": "Output folder",
-        "run_button": "Run",
-        "open_button": "Open Spreadsheet",
-        "clear_button": "Clear Status",
-        "reload_button": "Reload Theme",
-        "edit_button": "Open Theme File",
+        "run_button": "▶ Process Payslips",
+        "open_button": "📄 View Results",
+        "clear_button": "🗑️ Clear",
+        "reload_button": "🔄 Reload Theme",
+        "edit_button": "✏️ Edit Theme",
         "ready": "Ready.",
         "no_run": "No run yet.",
-        "running": "Running...",
+        "running": "Processing...",
     },
 }
 
@@ -98,6 +106,7 @@ class PayslipTrackerApp:
         self.last_result: ProcessResult | None = None
         self.worker: threading.Thread | None = None
         self.style = ttk.Style(self.root)
+        self.drag_active = False
 
         self.input_history = self._merge_history("input", self.project_root / self.config.get("input_dir", "input"))
         self.output_history = self._merge_history("output", self.project_root / self.config.get("output_dir", "output"))
@@ -301,10 +310,31 @@ class PayslipTrackerApp:
 
         self.input_label = ttk.Label(self.controls, style="App.TLabel")
         self.input_label.grid(row=0, column=0, sticky="w", pady=(0, 8))
-        self.input_combo = ttk.Combobox(self.controls, textvariable=self.input_var, values=self.input_history)
-        self.input_combo.grid(row=0, column=1, sticky="ew", padx=8, pady=(0, 8))
+        
+        # Create drop zone frame with drag-and-drop support
+        self.drop_frame = tk.Frame(self.controls, bg=self.theme["colors"]["input_bg"], relief="solid", borderwidth=1)
+        self.drop_frame.grid(row=0, column=1, sticky="ew", padx=8, pady=(0, 8))
+        self.drop_frame.columnconfigure(0, weight=1)
+        
+        self.input_combo = ttk.Combobox(self.drop_frame, textvariable=self.input_var, values=self.input_history)
+        self.input_combo.pack(fill="both", expand=True, padx=0, pady=0)
+        
         self.input_browse_button = ttk.Button(self.controls, command=self._pick_input_dir, style="Secondary.TButton")
         self.input_browse_button.grid(row=0, column=2, sticky="ew", pady=(0, 8))
+        
+        # Setup drag-and-drop if available
+        if HAS_DND:
+            try:
+                self.drop_frame.drop_target_register(DND_FILES)
+                self.drop_frame.dnd_bind('<<Drop>>', self._on_drop_files)
+                self.drop_frame.dnd_bind('<<DragEnter>>', self._on_drag_enter)
+                self.drop_frame.dnd_bind('<<DragLeave>>', self._on_drag_leave)
+                self.input_combo.drop_target_register(DND_FILES)
+                self.input_combo.dnd_bind('<<Drop>>', self._on_drop_files)
+                self.input_combo.dnd_bind('<<DragEnter>>', self._on_drag_enter)
+                self.input_combo.dnd_bind('<<DragLeave>>', self._on_drag_leave)
+            except Exception:
+                pass  # DND not fully supported on this platform
 
         self.output_label = ttk.Label(self.controls, style="App.TLabel")
         self.output_label.grid(row=1, column=0, sticky="w")
@@ -366,6 +396,9 @@ class PayslipTrackerApp:
         self.summary_frame.configure(text=labels["summary_title"], padding=spacing["panel_padding"])
         self.errors_frame.configure(text=labels["errors_title"], padding=spacing["panel_padding"])
 
+        # Update drop frame colors
+        self.drop_frame.configure(bg=colors["input_bg"], relief="solid", borderwidth=1)
+
         self.title_label.configure(text=labels["title"])
         self.subtitle_label.configure(text=labels["subtitle"])
         self.theme_hint_label.configure(text=f"{labels['theme_hint']}  File: {self.theme_path}")
@@ -413,7 +446,79 @@ class PayslipTrackerApp:
             pady=8,
         )
 
-    def _reload_theme(self) -> None:
+    def _on_drag_enter(self, event) -> str:
+        """Handle drag enter event - highlight drop zone."""
+        if HAS_DND:
+            self.drag_active = True
+            self.drop_frame.configure(
+                bg=self.theme["colors"]["drop_zone_bg"],
+                relief="solid",
+                borderwidth=2
+            )
+            # Change border color to accent
+            try:
+                self.drop_frame.configure(highlightbackground=self.theme["colors"]["drop_zone_border"])
+            except Exception:
+                pass
+        return "copy"
+
+    def _on_drag_leave(self, event) -> None:
+        """Handle drag leave event - restore normal appearance."""
+        if HAS_DND:
+            self.drag_active = False
+            self.drop_frame.configure(
+                bg=self.theme["colors"]["input_bg"],
+                relief="solid",
+                borderwidth=1
+            )
+
+    def _on_drop_files(self, event) -> None:
+        """Handle file drop event."""
+        self.drag_active = False
+        self.drop_frame.configure(
+            bg=self.theme["colors"]["input_bg"],
+            relief="solid",
+            borderwidth=1
+        )
+        
+        if not HAS_DND:
+            return
+        
+        try:
+            # Parse the dropped files from the event data
+            files_str = event.data
+            # Handle different formats of file paths
+            files = []
+            if files_str.startswith("{"):
+                # Windows format with braces
+                files_str = files_str.strip("{}")
+                files = [f.strip() for f in files_str.split("} {")]
+                files = [f.replace("{", "").replace("}", "") for f in files]
+            else:
+                # Unix format with spaces
+                files = files_str.split()
+            
+            # Filter for the first directory or most logical input
+            valid_dirs = []
+            for file_path in files:
+                clean_path = file_path.strip()
+                if clean_path:
+                    path = Path(clean_path)
+                    if path.is_dir():
+                        valid_dirs.append(str(path))
+                    elif path.is_file() and path.parent.exists():
+                        # If it's a file, use its parent directory
+                        valid_dirs.append(str(path.parent))
+            
+            if valid_dirs:
+                # Use the first valid directory
+                selected_dir = valid_dirs[0]
+                self._remember_directory("input", selected_dir)
+                self._append_status(f"Dropped folder: {selected_dir}")
+        except Exception as exc:
+            self._append_status(f"Drop failed: {exc}")
+
+    def _apply_theme(self, initial: bool = False) -> None:
         try:
             self.theme = self._load_theme()
             self._apply_theme()
