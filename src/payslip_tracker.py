@@ -312,6 +312,10 @@ def parse_payslip(file_path: Path, text: str, config: dict) -> PayslipRecord:
         except ValueError:
             pass
 
+    # Calculate Net YTD: Gross YTD - Tax YTD
+    if gross_ytd is not None and tax_ytd is not None:
+        net_ytd = gross_ytd - tax_ytd
+
     # Total hours this pay = ordinary + weekend + public holiday
     total_hours_this_pay = 0.0
     if ordinary_hours:
